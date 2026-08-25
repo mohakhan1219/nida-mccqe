@@ -1,6 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, type ReactNode } from "react"
+import { ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,14 +11,14 @@ import { useWorkspace } from "@/lib/data/workspace-context"
 import type { BackupFile, CatalogKind, ScheduleEvent, Settings } from "@/lib/types"
 import { newId } from "@/lib/format"
 import { catalogByKind } from "@/lib/catalogs"
+import { todayKey } from "@/lib/dates"
+import { humanizeSettingKey } from "@/lib/display"
 
 export function SettingsView() {
   const {
     snapshot,
     mode,
     updateSettings,
-    updateCatalogItem,
-    addCatalogItem,
     updateCourse,
     exportBackup,
     restoreBackup,
@@ -25,6 +26,10 @@ export function SettingsView() {
   } = useWorkspace()
   const fileRef = useRef<HTMLInputElement>(null)
   const s = snapshot.settings
+
+  const day = todayKey(s.timezone)
+  const upcoming = snapshot.schedule.filter((r) => r.date >= day && r.status !== "cancelled").length
+  const activeOf = (kind: CatalogKind) => snapshot.catalogs.filter((c) => c.kind === kind && c.active).length
 
   function num(key: keyof Settings, label: string, step = "1") {
     return (
@@ -45,8 +50,34 @@ export function SettingsView() {
     )
   }
 
+  function percent(key: "accuracyGoal" | "mockScoreBar" | "coverageReadyRatio", label: string) {
+    const shown = Math.round(Number(s[key] ?? 0) * 100)
+    return (
+      <div>
+        <FieldLabel>{label}</FieldLabel>
+        <div className="relative">
+          <Input
+            type="number"
+            step="1"
+            min="0"
+            className="h-10 pr-8"
+            defaultValue={String(shown)}
+            onBlur={(e) => {
+              const v = Number(e.target.value)
+              if (!Number.isFinite(v)) return
+              void updateSettings({ [key]: v / 100 } as Partial<Settings>)
+            }}
+          />
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
+            %
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-4 pb-8">
       <div>
         <h1 className="font-heading text-3xl">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -54,8 +85,7 @@ export function SettingsView() {
         </p>
       </div>
 
-      <section className="soft-card space-y-4 p-5">
-        <h2 className="font-heading text-lg">Profile & exam</h2>
+      <SettingsFold title="Profile & Exam" defaultOpen>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
             <FieldLabel>Student name</FieldLabel>
@@ -81,18 +111,17 @@ export function SettingsView() {
             <Input defaultValue={s.timezone} onBlur={(e) => void updateSettings({ timezone: e.target.value })} />
           </div>
         </div>
-      </section>
+      </SettingsFold>
 
-      <section className="soft-card space-y-4 p-5">
-        <h2 className="font-heading text-lg">Study goals</h2>
-        <p className="text-sm text-muted-foreground">Targets, not caps. Totals may exceed 100%.</p>
+      <SettingsFold title="Study Goals" summary="Targets, not caps" defaultOpen>
+        <p className="text-sm text-muted-foreground">Totals and percentages may exceed 100%.</p>
         <div className="grid gap-3 md:grid-cols-3">
           {num("dailyHourGoal", "Daily hours", "0.5")}
           {num("dailyQuestionGoal", "Daily questions")}
           {num("weeklyHourGoal", "Weekly hours", "0.5")}
           {num("weeklyQuestionGoal", "Weekly questions")}
-          {num("accuracyGoal", "Accuracy goal (0–1)", "0.01")}
-          {num("mockScoreBar", "Mock score bar (0–1)", "0.01")}
+          {percent("accuracyGoal", "Accuracy goal")}
+          {percent("mockScoreBar", "Mock score bar")}
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <div>
@@ -132,12 +161,13 @@ export function SettingsView() {
             />
           </div>
         </div>
-      </section>
+      </SettingsFold>
 
-      <details className="soft-card p-5">
-        <summary className="cursor-pointer font-heading text-lg">Advanced readiness settings</summary>
-        <p className="mt-2 text-sm text-muted-foreground">Scoring parameters. Nida does not need these for daily use.</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <SettingsFold title="Advanced Readiness Settings" summary="Scoring parameters · daily use not required">
+        <p className="text-sm text-muted-foreground">
+          These change how readiness is interpreted. Formulas stay the same; only the numbers you enter here move.
+        </p>
+        <div className="grid gap-3 md:grid-cols-3">
           {num("minQuestionsForBaseline", "Baseline question volume")}
           {num("minStudyDaysForBaseline", "Baseline study days")}
           {num("volumeHalfLife", "Volume half-life (questions)")}
@@ -148,15 +178,15 @@ export function SettingsView() {
           {num("progressingThreshold", "Progressing score")}
           {num("weakSubjectFloor", "Weak subject floor")}
           {num("overdueReviewCap", "Overdue review cap")}
-          {num("coverageReadyRatio", "Coverage ratio to book", "0.05")}
+          {percent("coverageReadyRatio", "Coverage ready to book")}
           {num("highConfidenceMin", "High confidence min")}
           {num("moderateConfidenceMin", "Moderate confidence min")}
           {num("minQuestionsForSubject", "Min questions / subject")}
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {Object.entries(s.weights).map(([k, v]) => (
             <div key={k}>
-              <FieldLabel>Weight · {k}</FieldLabel>
+              <FieldLabel>Weight · {humanizeSettingKey(k)}</FieldLabel>
               <Input
                 type="number"
                 defaultValue={v}
@@ -169,16 +199,15 @@ export function SettingsView() {
             </div>
           ))}
         </div>
-      </details>
+      </SettingsFold>
 
-      <CatalogEditor kind="subject" title="Subjects" />
-      <CatalogEditor kind="source" title="Sources" />
-      <CatalogEditor kind="activity" title="Activities" />
-      <CatalogEditor kind="assessment_type" title="Assessments" />
-      <CatalogEditor kind="error_type" title="Error types" />
+      <CatalogEditor kind="subject" title="Subjects" summary={`${activeOf("subject")} active`} />
+      <CatalogEditor kind="source" title="Sources" summary={`${activeOf("source")} active`} />
+      <CatalogEditor kind="activity" title="Activities" summary={`${activeOf("activity")} active`} />
+      <CatalogEditor kind="assessment_type" title="Assessments" summary={`${activeOf("assessment_type")} active`} />
+      <CatalogEditor kind="error_type" title="Error Types" summary={`${activeOf("error_type")} active`} />
 
-      <section className="soft-card space-y-4 p-5">
-        <h2 className="font-heading text-lg">Courses & question banks</h2>
+      <SettingsFold title="Courses & Question Banks" summary={`${snapshot.courses.length} configured`}>
         <p className="text-sm text-muted-foreground">Abzi schedule remains empty until you add unit or question targets.</p>
         {snapshot.courses.map((c) => (
           <div key={c.id} className="grid gap-2 border-t border-border/60 py-3 md:grid-cols-4">
@@ -216,12 +245,11 @@ export function SettingsView() {
             </div>
           </div>
         ))}
-      </section>
+      </SettingsFold>
 
-      <ScheduleEditor />
+      <ScheduleEditor summary={upcoming === 0 ? "No events yet" : `${upcoming} upcoming`} />
 
-      <section className="soft-card space-y-3 p-5">
-        <h2 className="font-heading text-lg">Backup</h2>
+      <SettingsFold title="Backup" summary="Export / Restore">
         <p className="text-sm text-muted-foreground">
           Export preserves sessions, assessments, reviews, settings, courses, catalogs, and schedule.
         </p>
@@ -260,7 +288,7 @@ export function SettingsView() {
             }}
           />
         </div>
-      </section>
+      </SettingsFold>
 
       {mode === "cloud" ? (
         <Button variant="ghost" onClick={() => void signOut()}>
@@ -271,14 +299,13 @@ export function SettingsView() {
   )
 }
 
-function CatalogEditor({ kind, title }: { kind: CatalogKind; items?: unknown; title: string }) {
+function CatalogEditor({ kind, title, summary }: { kind: CatalogKind; title: string; summary: string }) {
   const { snapshot, updateCatalogItem, addCatalogItem } = useWorkspace()
   const rows = snapshot.catalogs.filter((c) => c.kind === kind).sort((a, b) => a.sortOrder - b.sortOrder)
   const [name, setName] = useState("")
 
   return (
-    <section className="soft-card space-y-3 p-5">
-      <h2 className="font-heading text-lg">{title}</h2>
+    <SettingsFold title={title} summary={summary}>
       <ul className="space-y-2">
         {rows.map((row) => (
           <li key={row.id} className="grid grid-cols-[1fr_70px_70px] items-center gap-2">
@@ -329,11 +356,11 @@ function CatalogEditor({ kind, title }: { kind: CatalogKind; items?: unknown; ti
           Add
         </Button>
       </div>
-    </section>
+    </SettingsFold>
   )
 }
 
-function ScheduleEditor() {
+function ScheduleEditor({ summary }: { summary: string }) {
   const { snapshot, upsertSchedule, deleteSchedule } = useWorkspace()
   const subjects = catalogByKind(snapshot.catalogs, "subject")
   const rows = [...snapshot.schedule].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))
@@ -374,13 +401,10 @@ function ScheduleEditor() {
   }
 
   return (
-    <section className="soft-card space-y-4 p-5">
-      <div>
-        <h2 className="font-heading text-lg">Schedule</h2>
-        <p className="text-sm text-muted-foreground">
-          Abzi, Felipe, or any planned block. Empty until you add it — nothing is preloaded from Excel.
-        </p>
-      </div>
+    <SettingsFold title="Schedule" summary={summary}>
+      <p className="text-sm text-muted-foreground">
+        Abzi, Felipe, or any planned block. Empty until you add it — nothing is preloaded from Excel.
+      </p>
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Schedule not added yet.</p>
       ) : (
@@ -475,6 +499,37 @@ function ScheduleEditor() {
       <Button variant="outline" onClick={() => void addEvent()}>
         {editingId ? "Save schedule event" : "Add schedule event"}
       </Button>
+    </SettingsFold>
+  )
+}
+
+function SettingsFold({
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  title: string
+  summary?: string
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <section className="soft-card p-4 md:p-5">
+      <button
+        type="button"
+        className="flex w-full items-start justify-between gap-3 text-left"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>
+          <h2 className="font-heading text-lg">{title}</h2>
+          {summary ? <p className="mt-0.5 text-sm text-muted-foreground">{summary}</p> : null}
+        </span>
+        <ChevronDown className={`mt-1 size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? <div className="mt-4 space-y-4">{children}</div> : null}
     </section>
   )
 }

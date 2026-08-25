@@ -41,11 +41,8 @@ export function LoginView() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
-      <p className="font-heading text-3xl">Dr. Nida Medical OS</p>
-      <p className="mt-2 text-sm text-muted-foreground">From MBBS to Canadian Physician</p>
-      <p className="mt-1 text-[11px] tracking-[0.16em] text-primary/80 uppercase">
-        MCCQE1 Journey • Canada
-      </p>
+      <p className="font-heading text-3xl">Dr. Nida's MCCQE1 Journey</p>
+      <p className="mt-2 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
       <p className="mt-6 text-sm text-muted-foreground">
         Private household login. There is no public sign-up.
       </p>

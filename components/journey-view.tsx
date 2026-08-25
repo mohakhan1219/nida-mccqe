@@ -14,6 +14,8 @@ import {
   overallStageLabel,
   showReadinessPercent,
   subjectDisplayStatus,
+  subjectHealthCopy,
+  warmCopy,
 } from "@/lib/display"
 import { quoteContext, selectDailyQuote } from "@/lib/quote-context"
 import { accuracySeries, currentWeekKeys, dailyQuestions, dailyStudyHours, mockSeries } from "@/lib/series"
@@ -57,7 +59,7 @@ export function JourneyView() {
     .filter((s) => s.lastStudied)
     .sort((a, b) => (b.lastStudied ?? "").localeCompare(a.lastStudied ?? ""))
     .slice(0, 5)
-  const needsReview = active.filter((s) => s.status === "needs_focus" || s.pendingReviews > 0).slice(0, 5)
+  const needsReview = active.filter((s) => s.pendingReviews > 0).slice(0, 5)
   const barRows = [...active]
     .sort((a, b) => (b.readiness ?? 0) - (a.readiness ?? 0))
     .slice(0, 8)
@@ -81,8 +83,8 @@ export function JourneyView() {
             <h1 className="font-heading mt-2 text-3xl md:text-4xl">
               {showScore ? stage : "Building Your Baseline"}
             </h1>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{readiness.why}</p>
-            <p className="mt-2 text-sm">{readiness.nextFocus}</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{warmCopy(readiness.why)}</p>
+            <p className="mt-2 text-sm">{warmCopy(readiness.nextFocus)}</p>
             {!readiness.examDate && readiness.state === "ready_to_book" ? (
               <p className="mt-3 text-sm">You appear ready to book MCCQE1. Set the date in Settings when you have it.</p>
             ) : null}
@@ -170,15 +172,17 @@ export function JourneyView() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <Band title="Strong subjects" rows={strong} empty="Strong subjects will appear as accuracy and volume settle." />
-        <Band title="Weak subjects" rows={weak} empty="Weak areas appear after named subject blocks." />
+        <Band title="Focus · weak subjects" rows={weak} empty="Weak areas appear after named subject blocks." />
+        <Band title="Focus · needs review" rows={needsReview} empty="No review pressure yet." extra={(s) => (s.pendingReviews ? `${s.pendingReviews} pending` : "")} />
         <Band title="Recently studied" rows={recent} empty="Recently studied subjects will list here." extra={(s) => s.lastStudied ?? ""} />
-        <Band title="Needs review" rows={needsReview} empty="No review pressure yet." extra={(s) => (s.pendingReviews ? `${s.pendingReviews} pending` : "")} />
+        <Band title="Strong subjects" rows={strong} empty="Strong subjects will appear as accuracy and volume settle." />
       </section>
 
       <section className="soft-card p-5">
-        <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Subject progress</p>
-        <p className="mt-1 mb-4 text-sm text-muted-foreground">Active subjects only · max eight</p>
+        <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Subject health</p>
+        <p className="mt-1 mb-4 text-sm text-muted-foreground">
+          0–100 composite of accuracy, recency, tests, and review for each subject — not exam readiness and not accuracy alone. Active subjects, up to eight.
+        </p>
         <SubjectBars rows={barRows} />
       </section>
 
@@ -203,9 +207,18 @@ export function JourneyView() {
         <p className="text-sm text-muted-foreground">Schedule not added yet.</p>
       )}
 
-      <section>
-        <p className="mb-3 text-[11px] tracking-[0.12em] text-muted-foreground uppercase">All subjects</p>
-        <div className="space-y-2">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-foreground/8 [&::-webkit-details-marker]:hidden">
+          <div>
+            <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">All subjects</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {active.length} with study · {untouched.length} not started · full catalog
+            </p>
+          </div>
+          <span className="text-xs text-muted-foreground group-open:hidden">Show</span>
+          <span className="hidden text-xs text-muted-foreground group-open:inline">Hide</span>
+        </summary>
+        <div className="mt-3 space-y-2">
           {active.map((s) => (
             <ActiveSubject key={s.id} s={s} />
           ))}
@@ -219,7 +232,7 @@ export function JourneyView() {
             </div>
           ) : null}
         </div>
-      </section>
+      </details>
 
       <div className="space-y-6 border-t border-border/70 pt-8">
         <section className="soft-card p-5">
@@ -350,7 +363,7 @@ function ActiveSubject({ s }: { s: SubjectHealth }) {
         {s.accuracy != null ? ` · ${formatPercent(s.accuracy)}` : ""}
         {s.pendingReviews ? ` · ${s.pendingReviews} reviews` : ""}
         {s.lastStudied ? ` · last ${s.lastStudied}` : ""}
-        {s.readiness != null ? ` · ${s.readiness}` : ""}
+        {s.readiness != null ? ` · subject health ${subjectHealthCopy(s.readiness)}` : ""}
       </p>
     </div>
   )

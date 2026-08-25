@@ -310,7 +310,7 @@ function explain(
       why: "A baseline is still forming. Small samples can look better or worse than they are.",
       nextFocus:
         stats.mockCount === 0
-          ? "Keep logging honest sessions. Mock exams can wait until volume is more stable."
+          ? "Keep building your study record. Mock exams can wait until volume is more stable."
           : "Continue building question volume across more subjects.",
     }
   }

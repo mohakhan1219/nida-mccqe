@@ -1,6 +1,8 @@
-# Dr. Nida Medical OS
+# Dr. Nida's MCCQE1 Journey
 
-Private study operating system for **Dr. Nida** — MCCQE1 preparation on the path from MBBS to a Canadian physician.
+From MBBS to Canadian Physician 🇨🇦
+
+Private study companion for **Dr. Nida** — MCCQE1 preparation on the path from MBBS to a Canadian physician.
 
 Nida opens the app on her iPhone, iPad, or laptop, logs a session in about a minute, and the Journey dashboard calculates progress, weak areas, and exam readiness from real evidence. Cursor is only for development.
 

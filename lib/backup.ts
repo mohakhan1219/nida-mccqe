@@ -6,7 +6,7 @@ export function snapshotToBackup(snapshot: WorkspaceSnapshot): BackupFile {
     version: 1,
     exportedAt: new Date().toISOString(),
     snapshot: {
-      workspaceName: "Dr. Nida Medical OS",
+      workspaceName: "Dr. Nida's MCCQE1 Journey",
       settings: snapshot.settings,
       catalogs: snapshot.catalogs,
       sessions: snapshot.sessions,

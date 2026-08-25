@@ -117,6 +117,10 @@
   @apply rounded-[1.4rem] bg-[color-mix(in_oklch,var(--accent)_55%,var(--card))] ring-1 ring-primary/15 shadow-[0_8px_32px_rgba(70,40,90,0.08)];
 }
 
+.ops-shell {
+  font-size: 13px;
+}
+
 .ops-panel {
-  @apply rounded-xl bg-card ring-1 ring-foreground/10 shadow-[0_1px_1px_rgba(20,20,30,0.04)];
+  @apply rounded-lg bg-card ring-1 ring-foreground/10 shadow-[0_1px_1px_rgba(20,20,30,0.04)];
 }

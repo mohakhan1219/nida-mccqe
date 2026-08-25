@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest"
 import {
   evidenceBandLabel,
+  formatLastActivity,
   goalCountCopy,
   goalHoursCopy,
   goalProgress,
+  humanizeSettingKey,
   overallStageLabel,
   showReadinessPercent,
   subjectDisplayStatus,
+  subjectHealthCopy,
+  warmCopy,
+  weeklyGoalsHeadline,
 } from "@/lib/display"
 
 describe("readiness display gating", () => {
@@ -54,5 +59,42 @@ describe("weekly goals are never caps", () => {
     expect(goalHoursCopy(24, 24)).toContain("Goal met")
     expect(goalProgress(18, 24).percent).toBeCloseTo(75)
     expect(goalProgress(18, 24).status).toBe("progress")
+  })
+})
+
+describe("last activity and weekly goal headlines", () => {
+  it("formats recent activity as relative or Today", () => {
+    const now = new Date("2026-08-25T22:43:00.000Z")
+    expect(formatLastActivity("2026-08-25T22:09:00.000Z", "UTC", now)).toBe("34 min ago")
+    expect(formatLastActivity("2026-08-25T18:43:00.000Z", "UTC", now)).toBe("Today, 6:43 PM")
+    expect(formatLastActivity(null)).toBe("No activity yet")
+  })
+
+  it("shows uncapped weekly percents plus Goal Met / Exceeded", () => {
+    const hours = goalProgress(0.5, 24)
+    const questions = goalProgress(80, 240)
+    expect(weeklyGoalsHeadline(hours, questions).line).toBe("2% hours · 33% questions")
+    expect(weeklyGoalsHeadline(hours, questions).status).toBeNull()
+    expect(weeklyGoalsHeadline(goalProgress(24, 24), goalProgress(240, 240)).status).toBe("Goal Met")
+    expect(weeklyGoalsHeadline(goalProgress(30, 24), goalProgress(240, 240)).status).toBe("Goal Exceeded")
+  })
+})
+
+describe("settings and subject-health labels", () => {
+  it("humanizes camelCase setting keys", () => {
+    expect(humanizeSettingKey("recentAccuracy")).toBe("Recent Accuracy")
+    expect(humanizeSettingKey("reviewHygiene")).toBe("Review Hygiene")
+    expect(humanizeSettingKey("courseProgress")).toBe("Course Progress")
+  })
+
+  it("labels subject health as n / 100 without calling it exam ready", () => {
+    expect(subjectHealthCopy(63)).toBe("63 / 100")
+    expect(subjectHealthCopy(null)).toBe("—")
+  })
+
+  it("warms judgmental session copy", () => {
+    expect(warmCopy("Keep logging honest sessions. Mock exams can wait until volume is more stable.")).toBe(
+      "Keep building your study record. Mock exams can wait until volume is more stable."
+    )
   })
 })

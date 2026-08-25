@@ -88,13 +88,10 @@ function Header() {
     <header className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-heading text-[1.65rem] leading-none tracking-tight text-foreground md:text-3xl">
-            👩‍⚕️ Dr. Nida Medical OS
+          <p className="font-heading text-[1.55rem] leading-none tracking-tight text-foreground md:text-3xl">
+            👩‍⚕️ Dr. Nida's MCCQE1 Journey
           </p>
-          <p className="mt-1.5 text-sm text-muted-foreground">From MBBS to Canadian Physician</p>
-          <p className="mt-0.5 text-[11px] tracking-[0.18em] text-primary/80 uppercase">
-            MCCQE1 Journey • Canada 🇨🇦
-          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
         </div>
         <nav className="hidden items-center gap-1 md:flex">
           {NAV.map((item) => {

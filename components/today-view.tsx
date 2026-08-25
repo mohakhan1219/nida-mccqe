@@ -12,7 +12,7 @@ import { cnHours, formatDurationClock, formatPercent } from "@/lib/format"
 import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
 import { catalogName } from "@/lib/stats"
 import { quoteContext, selectDailyQuote } from "@/lib/quote-context"
-import { evidenceBandLabel, goalCountCopy, goalHoursCopy, overallStageLabel, showReadinessPercent } from "@/lib/display"
+import { evidenceBandLabel, goalCountCopy, goalHoursCopy, overallStageLabel, showReadinessPercent, warmCopy } from "@/lib/display"
 
 function isoFromLocal(v: string) {
   return new Date(v).toISOString()
@@ -103,7 +103,7 @@ export function TodayView() {
     ? `You're live — stay with ${catalogName(snapshot, running.subjectId)}.`
     : stats.todayHours === 0 && stats.todayQuestions === 0
       ? "Punch in for today's first session."
-      : readiness.nextFocus
+      : warmCopy(readiness.nextFocus)
 
   const mock = isMockType(qType, snapshot.catalogs)
   const liveCounts = {

@@ -20,12 +20,12 @@ const heading = Fraunces({
 })
 
 export const metadata: Metadata = {
-  title: "Dr. Nida Medical OS",
-  description: "From MBBS to Canadian Physician — MCCQE1 Journey",
-  applicationName: "Dr. Nida Medical OS",
+  title: "Dr. Nida's MCCQE1 Journey",
+  description: "From MBBS to Canadian Physician 🇨🇦",
+  applicationName: "Dr. Nida's MCCQE1 Journey",
   appleWebApp: {
     capable: true,
-    title: "Nida OS",
+    title: "MCCQE1 Journey",
     statusBarStyle: "default",
   },
   formatDetection: { telephone: false },

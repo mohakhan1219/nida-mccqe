@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Dr. Nida Medical OS",
-    short_name: "Nida OS",
-    description: "From MBBS to Canadian Physician — MCCQE1 Journey • Canada",
+    name: "Dr. Nida's MCCQE1 Journey",
+    short_name: "MCCQE1 Journey",
+    description: "From MBBS to Canadian Physician 🇨🇦",
     start_url: "/",
     scope: "/",
     display: "standalone",
