@@ -84,7 +84,8 @@ export function SettingsView() {
       </section>
 
       <section className="soft-card space-y-4 p-5">
-        <h2 className="font-heading text-lg">Study targets</h2>
+        <h2 className="font-heading text-lg">Study goals</h2>
+        <p className="text-sm text-muted-foreground">Targets, not caps. Totals may exceed 100%.</p>
         <div className="grid gap-3 md:grid-cols-3">
           {num("dailyHourGoal", "Daily hours", "0.5")}
           {num("dailyQuestionGoal", "Daily questions")}
@@ -93,11 +94,50 @@ export function SettingsView() {
           {num("accuracyGoal", "Accuracy goal (0–1)", "0.01")}
           {num("mockScoreBar", "Mock score bar (0–1)", "0.01")}
         </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div>
+            <FieldLabel>Review interval 1 (days)</FieldLabel>
+            <Input
+              type="number"
+              defaultValue={s.reviewIntervals[0]}
+              onBlur={(e) =>
+                void updateSettings({
+                  reviewIntervals: [Number(e.target.value) || 1, s.reviewIntervals[1], s.reviewIntervals[2]],
+                })
+              }
+            />
+          </div>
+          <div>
+            <FieldLabel>Review interval 2 (days)</FieldLabel>
+            <Input
+              type="number"
+              defaultValue={s.reviewIntervals[1]}
+              onBlur={(e) =>
+                void updateSettings({
+                  reviewIntervals: [s.reviewIntervals[0], Number(e.target.value) || 7, s.reviewIntervals[2]],
+                })
+              }
+            />
+          </div>
+          <div>
+            <FieldLabel>Review interval 3 (days)</FieldLabel>
+            <Input
+              type="number"
+              defaultValue={s.reviewIntervals[2]}
+              onBlur={(e) =>
+                void updateSettings({
+                  reviewIntervals: [s.reviewIntervals[0], s.reviewIntervals[1], Number(e.target.value) || 21],
+                })
+              }
+            />
+          </div>
+        </div>
       </section>
 
-      <section className="soft-card space-y-4 p-5">
-        <h2 className="font-heading text-lg">Readiness thresholds</h2>
-        <div className="grid gap-3 md:grid-cols-3">
+      <details className="soft-card p-5">
+        <summary className="cursor-pointer font-heading text-lg">Advanced readiness settings</summary>
+        <p className="mt-2 text-sm text-muted-foreground">Scoring parameters. Nida does not need these for daily use.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
           {num("minQuestionsForBaseline", "Baseline question volume")}
           {num("minStudyDaysForBaseline", "Baseline study days")}
           {num("volumeHalfLife", "Volume half-life (questions)")}
@@ -113,7 +153,7 @@ export function SettingsView() {
           {num("moderateConfidenceMin", "Moderate confidence min")}
           {num("minQuestionsForSubject", "Min questions / subject")}
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
           {Object.entries(s.weights).map(([k, v]) => (
             <div key={k}>
               <FieldLabel>Weight · {k}</FieldLabel>
@@ -129,12 +169,13 @@ export function SettingsView() {
             </div>
           ))}
         </div>
-      </section>
+      </details>
 
-      <CatalogEditor kind="subject" title="Subjects (weight = importance)" />
+      <CatalogEditor kind="subject" title="Subjects" />
       <CatalogEditor kind="source" title="Sources" />
       <CatalogEditor kind="activity" title="Activities" />
-      <CatalogEditor kind="assessment_type" title="Assessment types" />
+      <CatalogEditor kind="assessment_type" title="Assessments" />
+      <CatalogEditor kind="error_type" title="Error types" />
 
       <section className="soft-card space-y-4 p-5">
         <h2 className="font-heading text-lg">Courses & question banks</h2>
@@ -303,6 +344,7 @@ function ScheduleEditor() {
   const [subjectId, setSubjectId] = useState("")
   const [courseId, setCourseId] = useState(snapshot.courses.find((c) => c.id === "course:abzi")?.id ?? snapshot.courses[0]?.id ?? "")
   const [notes, setNotes] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   async function addEvent() {
     if (!date) {
@@ -310,7 +352,7 @@ function ScheduleEditor() {
       return
     }
     const row: ScheduleEvent = {
-      id: newId(),
+      id: editingId ?? newId(),
       date,
       startTime,
       endTime,
@@ -325,6 +367,7 @@ function ScheduleEditor() {
       await upsertSchedule(row)
       toast.success("Schedule saved")
       setNotes("")
+      setEditingId(null)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save schedule")
     }
@@ -355,9 +398,26 @@ function ScheduleEditor() {
                 </p>
                 {row.notes ? <p className="mt-1 text-sm">{row.notes}</p> : null}
               </div>
-              <Button variant="ghost" onClick={() => void deleteSchedule(row.id)}>
-                Remove
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingId(row.id)
+                    setDate(row.date)
+                    setStartTime(row.startTime)
+                    setEndTime(row.endTime)
+                    setEventType(row.eventType)
+                    setSubjectId(row.subjectId ?? "")
+                    setCourseId(row.courseId ?? "")
+                    setNotes(row.notes)
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button variant="ghost" onClick={() => void deleteSchedule(row.id)}>
+                  Remove
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
@@ -413,7 +473,7 @@ function ScheduleEditor() {
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
       </div>
       <Button variant="outline" onClick={() => void addEvent()}>
-        Add schedule event
+        {editingId ? "Save schedule event" : "Add schedule event"}
       </Button>
     </section>
   )

@@ -9,15 +9,10 @@ import { useWorkspace } from "@/lib/data/workspace-context"
 import { catalogByKind } from "@/lib/catalogs"
 import { quoteIndexForDay, resolveAssessmentWindow, todayKey } from "@/lib/dates"
 import { cnHours, formatDurationClock, formatPercent } from "@/lib/format"
+import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
 import { catalogName } from "@/lib/stats"
-import { confidenceLabel, stateLabel } from "@/lib/readiness"
-import { isMockType } from "@/lib/metrics"
-
-function localInputFromIso(iso: string) {
-  const d = new Date(iso)
-  const p = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
-}
+import { quoteContext, selectDailyQuote } from "@/lib/quote-context"
+import { evidenceBandLabel, goalCountCopy, goalHoursCopy, overallStageLabel, showReadinessPercent } from "@/lib/display"
 
 function isoFromLocal(v: string) {
   return new Date(v).toISOString()
@@ -45,14 +40,18 @@ export function TodayView() {
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "")
   const [sourceId, setSourceId] = useState(sources[0]?.id ?? "")
   const [activityId, setActivityId] = useState(activities[0]?.id ?? "")
+  const [topic, setTopic] = useState("")
   const [manual, setManual] = useState(false)
   const [startLocal, setStartLocal] = useState("")
   const [endLocal, setEndLocal] = useState("")
   const [elapsed, setElapsed] = useState(0)
+  const [warned, setWarned] = useState(false)
 
   const [qSubject, setQSubject] = useState(subjects[0]?.id ?? "")
   const [qSource, setQSource] = useState(sources[0]?.id ?? "")
   const [qType, setQType] = useState(assessmentTypes[0]?.id ?? "")
+  const [qTopic, setQTopic] = useState("")
+  const [qName, setQName] = useState("")
   const [qStart, setQStart] = useState("")
   const [qEnd, setQEnd] = useState("")
   const [total, setTotal] = useState("")
@@ -62,6 +61,7 @@ export function TodayView() {
   const [countAsSession, setCountAsSession] = useState(true)
   const [sendReview, setSendReview] = useState(false)
   const [advanced, setAdvanced] = useState(false)
+  const [showQuestions, setShowQuestions] = useState(false)
 
   useEffect(() => {
     if (!subjectId && subjects[0]) setSubjectId(subjects[0].id)
@@ -73,22 +73,54 @@ export function TodayView() {
   }, [subjects, sources, activities, assessmentTypes, subjectId, sourceId, activityId, qSubject, qSource, qType])
 
   useEffect(() => {
-    if (!running) return
+    if (!running) {
+      setElapsed(0)
+      setWarned(false)
+      return
+    }
     const tick = () => setElapsed((Date.now() - new Date(running.startAt).getTime()) / 1000)
     tick()
     const id = window.setInterval(tick, 1000)
     return () => window.clearInterval(id)
   }, [running])
 
+  useEffect(() => {
+    if (!running || warned) return
+    const limit = snapshot.settings.warnSessionHours * 3600
+    if (limit > 0 && elapsed >= limit) {
+      setWarned(true)
+      toast.message("Long session", { description: "Consider punching out and resting." })
+    }
+  }, [elapsed, running, warned, snapshot.settings.warnSessionHours])
+
+  const day = todayKey(snapshot.settings.timezone)
   const quote = useMemo(() => {
-    const day = todayKey(snapshot.settings.timezone)
-    const i = quoteIndexForDay(day, snapshot.quotes.length)
-    return snapshot.quotes[i]
-  }, [snapshot.quotes, snapshot.settings.timezone])
+    const ctx = quoteContext(stats, snapshot.settings.weeklyHourGoal, snapshot.settings.weeklyQuestionGoal)
+    return selectDailyQuote(snapshot.quotes, day, ctx) ?? snapshot.quotes[quoteIndexForDay(day, snapshot.quotes.length)]
+  }, [snapshot.quotes, snapshot.settings.weeklyHourGoal, snapshot.settings.weeklyQuestionGoal, stats, day])
+
+  const nextAction = running
+    ? `You're live — stay with ${catalogName(snapshot, running.subjectId)}.`
+    : stats.todayHours === 0 && stats.todayQuestions === 0
+      ? "Punch in for today's first session."
+      : readiness.nextFocus
+
+  const mock = isMockType(qType, snapshot.catalogs)
+  const liveCounts = {
+    total: Number(total),
+    correct: Number(correct),
+    incorrect: Number(incorrect),
+    skipped: Number(skipped) || 0,
+  }
+  const liveReady = liveCounts.total > 0 && Number.isFinite(liveCounts.total)
+  const liveAttempted = liveCounts.correct + liveCounts.incorrect
+  const liveAccuracy = liveReady ? accuracyOf(liveCounts) : null
+  const liveScore = liveReady ? scoreOf(liveCounts) : null
+  const liveAttemptedPct = liveReady ? liveAttempted / liveCounts.total : null
 
   async function onPunchIn() {
     try {
-      await punchIn({ subjectId, sourceId, activityId })
+      await punchIn({ subjectId, sourceId, activityId, topic })
       toast.success("Session started")
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not punch in")
@@ -110,12 +142,14 @@ export function TodayView() {
         subjectId,
         sourceId,
         activityId,
+        topic,
         startAt: isoFromLocal(startLocal),
         endAt: isoFromLocal(endLocal),
       })
       toast.success("Session saved")
       setStartLocal("")
       setEndLocal("")
+      setManual(false)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save")
     }
@@ -123,26 +157,23 @@ export function TodayView() {
 
   async function onSaveQuestions() {
     try {
-      const t = Number(total)
-      const c = Number(correct)
-      const ic = Number(incorrect)
-      const sk = Number(skipped)
       const { startAt, endAt } = resolveAssessmentWindow({
         startLocal: qStart,
         endLocal: qEnd,
         runningStartAt: running?.startAt,
       })
-      const mock = isMockType(qType, snapshot.catalogs)
       await saveAssessment({
         subjectId: qSubject,
         sourceId: qSource,
         assessmentTypeId: qType,
+        topic: qTopic,
+        testName: qName,
         startAt,
         endAt,
-        total: t,
-        correct: c,
-        incorrect: ic,
-        skipped: sk,
+        total: liveCounts.total,
+        correct: liveCounts.correct,
+        incorrect: liveCounts.incorrect,
+        skipped: liveCounts.skipped,
         countAsStudySession: countAsSession && !running,
         sendIncorrectsToReview: sendReview,
         kind: mock ? "test" : "block",
@@ -152,222 +183,259 @@ export function TodayView() {
       setCorrect("")
       setIncorrect("")
       setSkipped("0")
+      setQName("")
+      setQTopic("")
+      setShowQuestions(false)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save")
     }
   }
 
   const empty = stats.lifetimeQuestions === 0 && stats.rhythm.lastStudyDate == null && !running
-  const todayEvents = snapshot.schedule.filter((row) => row.date === todayKey(snapshot.settings.timezone))
+  const todayEvents = snapshot.schedule.filter((row) => row.date === day)
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Opening today’s desk…</p>
+    return <p className="text-sm text-muted-foreground">Opening today's desk…</p>
   }
 
   return (
-    <div className="space-y-6">
-      <section className="soft-card px-5 py-5 md:px-7">
-        <p className="text-[11px] tracking-[0.16em] text-primary/80 uppercase">For Nida</p>
-        <p className="font-heading mt-2 max-w-2xl text-xl leading-snug text-foreground md:text-2xl">
-          {quote?.message ?? "Begin."}
-        </p>
+    <div className="space-y-5 pb-4">
+      <section className="soft-card px-5 py-5 md:px-6">
+        <p className="text-[11px] tracking-[0.16em] text-primary/80 uppercase">Today</p>
+        <h1 className="font-heading mt-1 text-2xl leading-snug md:text-[1.85rem]">{nextAction}</h1>
+        {quote ? <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">{quote.message}</p> : null}
       </section>
 
-      <section className="grid gap-3 md:grid-cols-4">
-        <Mini label="Today’s hours" value={cnHours(stats.todayHours * 60)} />
-        <Mini label="Today’s questions" value={String(stats.todayQuestions || "—")} />
-        <Mini label="Accuracy today" value={formatPercent(stats.todayAccuracy)} />
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Mini label="Study time" value={cnHours(stats.todayHours * 60)} />
+        <Mini label="Questions" value={String(stats.todayQuestions || "—")} />
+        <Mini label="Accuracy" value={formatPercent(stats.todayAccuracy)} />
         <Mini
           label="Readiness"
-          value={stateLabel(readiness.state)}
-          hint={readiness.score != null ? `${readiness.score} · ${confidenceLabel(readiness.confidence)}` : undefined}
+          value={showReadinessPercent(readiness) ? overallStageLabel(readiness.state, readiness.examDate) : "Building Baseline"}
+          hint={
+            showReadinessPercent(readiness)
+              ? `${readiness.score} · ${evidenceBandLabel(readiness.confidence)}`
+              : `Evidence ${evidenceBandLabel(readiness.confidence)}`
+          }
         />
       </section>
 
-      <section className="soft-card p-5 md:p-6">
-        <div className="mb-4 flex items-end justify-between gap-3">
-          <div>
+      {running ? (
+        <section className="live-card px-5 py-5 md:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] tracking-[0.16em] text-primary uppercase">Live session</p>
+              <p className="font-heading mt-1 text-xl">
+                {catalogName(snapshot, running.subjectId)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {catalogName(snapshot, running.sourceId)} · {catalogName(snapshot, running.activityId)}
+                {running.topic ? ` · ${running.topic}` : ""}
+              </p>
+            </div>
+            <p className="font-heading text-3xl tabular text-primary">{formatDurationClock(elapsed)}</p>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button className="h-12 min-w-36 px-6 text-base" onClick={() => void onPunchOut()}>
+              Punch Out
+            </Button>
+            <Button variant="ghost" className="h-12" onClick={() => void discardRunning()}>
+              Discard
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <section className="soft-card p-5 md:p-6">
+          <div className="mb-4">
             <h2 className="font-heading text-xl">Study</h2>
-            <p className="text-sm text-muted-foreground">Subject, source, activity. Punch in. Study. Punch out.</p>
+            <p className="text-sm text-muted-foreground">Subject, source, activity. Punch in.</p>
           </div>
-          {running ? (
-            <span className="tabular text-lg font-medium text-primary">{formatDurationClock(elapsed)}</span>
-          ) : null}
-        </div>
-
-        {running ? (
-          <div className="mb-4 rounded-xl bg-accent/50 px-4 py-3 text-sm">
-            Studying {catalogName(snapshot, running.subjectId)} · {catalogName(snapshot, running.sourceId)}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <FieldLabel>Subject</FieldLabel>
+              <NativeSelect value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <div>
+              <FieldLabel>Source</FieldLabel>
+              <NativeSelect value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
+                {sources.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <div>
+              <FieldLabel>Activity</FieldLabel>
+              <NativeSelect value={activityId} onChange={(e) => setActivityId(e.target.value)}>
+                {activities.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
           </div>
-        ) : null}
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <div>
-            <FieldLabel>Subject</FieldLabel>
-            <NativeSelect value={subjectId} onChange={(e) => setSubjectId(e.target.value)} disabled={Boolean(running)}>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </NativeSelect>
+          <div className="mt-3">
+            <FieldLabel>Topic (optional)</FieldLabel>
+            <Input className="h-11" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. ACS, consent" />
           </div>
-          <div>
-            <FieldLabel>Source</FieldLabel>
-            <NativeSelect value={sourceId} onChange={(e) => setSourceId(e.target.value)} disabled={Boolean(running)}>
-              {sources.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-          <div>
-            <FieldLabel>Activity</FieldLabel>
-            <NativeSelect value={activityId} onChange={(e) => setActivityId(e.target.value)} disabled={Boolean(running)}>
-              {activities.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {running ? (
-            <>
-              <Button className="h-11 px-5" onClick={() => void onPunchOut()}>
-                Punch Out
-              </Button>
-              <Button variant="ghost" className="h-11" onClick={() => void discardRunning()}>
-                Discard
-              </Button>
-            </>
-          ) : (
-            <Button className="h-11 px-5" onClick={() => void onPunchIn()} disabled={!subjectId}>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button className="h-12 min-w-36 px-6 text-base" onClick={() => void onPunchIn()} disabled={!subjectId}>
               Punch In
             </Button>
-          )}
-          <Button variant="outline" className="h-11" onClick={() => setManual((v) => !v)} disabled={Boolean(running)}>
-            {manual ? "Hide manual times" : "Enter times manually"}
-          </Button>
-        </div>
-
-        {manual && !running ? (
-          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <div>
-              <FieldLabel>Start</FieldLabel>
-              <Input type="datetime-local" className="h-11" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} />
-            </div>
-            <div>
-              <FieldLabel>End</FieldLabel>
-              <Input type="datetime-local" className="h-11" value={endLocal} onChange={(e) => setEndLocal(e.target.value)} />
-            </div>
-            <div className="flex items-end">
-              <Button className="h-11 w-full" onClick={() => void onManualSave()}>
-                Save session
-              </Button>
-            </div>
+            <Button variant="ghost" className="h-12" onClick={() => setManual((v) => !v)}>
+              {manual ? "Hide manual times" : "Enter times manually"}
+            </Button>
           </div>
-        ) : null}
-      </section>
-
-      <section className="soft-card p-5 md:p-6">
-        <h2 className="font-heading text-xl">Questions / assessments</h2>
-        <p className="mb-4 text-sm text-muted-foreground">Only if she practised questions or sat a test.</p>
-        <div className="grid gap-3 md:grid-cols-3">
-          <div>
-            <FieldLabel>Subject</FieldLabel>
-            <NativeSelect value={qSubject} onChange={(e) => setQSubject(e.target.value)}>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-          <div>
-            <FieldLabel>Source</FieldLabel>
-            <NativeSelect value={qSource} onChange={(e) => setQSource(e.target.value)}>
-              {sources.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-          <div>
-            <FieldLabel>Assessment type</FieldLabel>
-            <NativeSelect value={qType} onChange={(e) => setQType(e.target.value)}>
-              {assessmentTypes.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Num label="Total" value={total} onChange={setTotal} />
-          <Num label="Correct" value={correct} onChange={setCorrect} />
-          <Num label="Incorrect" value={incorrect} onChange={setIncorrect} />
-          <Num label="Skipped" value={skipped} onChange={setSkipped} />
-        </div>
-        <button
-          type="button"
-          className="mt-3 text-xs tracking-wide text-muted-foreground uppercase"
-          onClick={() => setAdvanced((v) => !v)}
-        >
-          {advanced ? "Hide optional fields" : "Optional times & review"}
-        </button>
-        {advanced ? (
-          <div className="mt-3 space-y-3">
-            <div className="grid gap-3 md:grid-cols-2">
+          {manual ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
               <div>
                 <FieldLabel>Start</FieldLabel>
-                <Input type="datetime-local" className="h-11" value={qStart} onChange={(e) => setQStart(e.target.value)} />
+                <Input type="datetime-local" className="h-11" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} />
               </div>
               <div>
                 <FieldLabel>End</FieldLabel>
-                <Input type="datetime-local" className="h-11" value={qEnd} onChange={(e) => setQEnd(e.target.value)} />
+                <Input type="datetime-local" className="h-11" value={endLocal} onChange={(e) => setEndLocal(e.target.value)} />
+              </div>
+              <div className="flex items-end">
+                <Button className="h-11 w-full" onClick={() => void onManualSave()}>
+                  Save session
+                </Button>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={countAsSession} onChange={(e) => setCountAsSession(e.target.checked)} />
-              Count as a study session
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={sendReview} onChange={(e) => setSendReview(e.target.checked)} />
-              Send incorrects to Review
-            </label>
+          ) : null}
+        </section>
+      )}
+
+      <section className="soft-card p-5 md:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-heading text-xl">Questions</h2>
+            <p className="text-sm text-muted-foreground">Only if you practised questions or sat a test.</p>
+          </div>
+          <Button variant="outline" className="h-10" onClick={() => setShowQuestions((v) => !v)}>
+            {showQuestions || liveReady ? "Hide" : "Log a block"}
+          </Button>
+        </div>
+        {showQuestions || liveReady ? (
+          <div className="mt-4 space-y-3">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div>
+                <FieldLabel>Subject</FieldLabel>
+                <NativeSelect value={qSubject} onChange={(e) => setQSubject(e.target.value)}>
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+              <div>
+                <FieldLabel>Source</FieldLabel>
+                <NativeSelect value={qSource} onChange={(e) => setQSource(e.target.value)}>
+                  {sources.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+              <div>
+                <FieldLabel>Assessment type</FieldLabel>
+                <NativeSelect value={qType} onChange={(e) => setQType(e.target.value)}>
+                  {assessmentTypes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <FieldLabel>Topic (optional)</FieldLabel>
+                <Input className="h-11" value={qTopic} onChange={(e) => setQTopic(e.target.value)} />
+              </div>
+              {mock ? (
+                <div>
+                  <FieldLabel>Test / mock name (optional)</FieldLabel>
+                  <Input className="h-11" value={qName} onChange={(e) => setQName(e.target.value)} />
+                </div>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <Num label="Total" value={total} onChange={setTotal} />
+              <Num label="Correct" value={correct} onChange={setCorrect} />
+              <Num label="Incorrect" value={incorrect} onChange={setIncorrect} />
+              <Num label="Skipped" value={skipped} onChange={setSkipped} />
+            </div>
+            {liveReady ? (
+              <p className="text-sm text-muted-foreground">
+                Attempted {formatPercent(liveAttemptedPct)} · Accuracy {formatPercent(liveAccuracy)} · Score{" "}
+                {formatPercent(liveScore)}
+              </p>
+            ) : null}
+            <button type="button" className="text-xs tracking-wide text-muted-foreground uppercase" onClick={() => setAdvanced((v) => !v)}>
+              {advanced ? "Hide optional fields" : "Optional times & review"}
+            </button>
+            {advanced ? (
+              <div className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <FieldLabel>Start</FieldLabel>
+                    <Input type="datetime-local" className="h-11" value={qStart} onChange={(e) => setQStart(e.target.value)} />
+                  </div>
+                  <div>
+                    <FieldLabel>End</FieldLabel>
+                    <Input type="datetime-local" className="h-11" value={qEnd} onChange={(e) => setQEnd(e.target.value)} />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={countAsSession} onChange={(e) => setCountAsSession(e.target.checked)} />
+                  Count as a study session
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={sendReview} onChange={(e) => setSendReview(e.target.checked)} />
+                  Send incorrects to Review
+                </label>
+              </div>
+            ) : null}
+            <Button className="h-11 px-5" onClick={() => void onSaveQuestions()}>
+              Save
+            </Button>
           </div>
         ) : null}
-        <Button className="mt-4 h-11 px-5" onClick={() => void onSaveQuestions()}>
-          Save
-        </Button>
       </section>
 
-      {empty ? (
-        <p className="px-1 text-sm text-muted-foreground">
-          Your journey starts here. Start today’s study session when you are ready.
-        </p>
-      ) : null}
+      <p className="text-xs text-muted-foreground">
+        Weekly study goal {goalHoursCopy(stats.week.hours, snapshot.settings.weeklyHourGoal)} · Question goal{" "}
+        {goalCountCopy(stats.week.questions, snapshot.settings.weeklyQuestionGoal)}
+      </p>
 
       {todayEvents.length ? (
         <section className="soft-card p-5">
-          <h2 className="font-heading text-lg">Today’s schedule</h2>
+          <h2 className="font-heading text-lg">Today's schedule</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {todayEvents.map((row) => (
-              <li key={row.id} className="flex justify-between gap-3">
-                <span>
-                  {row.startTime}–{row.endTime} · {row.eventType}
-                  {row.subjectId ? ` · ${catalogName(snapshot, row.subjectId)}` : ""}
-                </span>
+              <li key={row.id}>
+                {row.startTime}–{row.endTime} · {row.eventType}
+                {row.subjectId ? ` · ${catalogName(snapshot, row.subjectId)}` : ""}
               </li>
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {empty ? (
+        <p className="px-1 text-sm text-muted-foreground">Your journey starts here. Punch in when you are ready.</p>
       ) : null}
     </div>
   )
@@ -395,14 +463,7 @@ function Num({
   return (
     <div>
       <FieldLabel>{label}</FieldLabel>
-      <Input
-        inputMode="numeric"
-        className="h-11 tabular"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <Input inputMode="numeric" className="h-11 tabular" value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   )
 }
-
-void localInputFromIso

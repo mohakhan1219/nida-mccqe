@@ -11,6 +11,7 @@ Nida opens the app on her iPhone, iPad, or laptop, logs a session in about a min
 - **Review** — incorrect-review queue with 1 / 7 / 21 day intervals
 - **History** — edit or delete any record; calculations update immediately
 - **Settings** — catalogs, targets, readiness weights, courses, Abzi/Felipe schedule, exam date, backup
+- **Ops** (`/ops`) — Mudasir’s read-only observability dashboard (hidden from Nida’s tab bar; preview banner link)
 
 Production launches with **no fake study history**. Empty states are intentional.
 

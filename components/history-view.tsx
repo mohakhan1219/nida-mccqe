@@ -2,17 +2,20 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
+import { formatInTimeZone } from "date-fns-tz"
+import { parseISO } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useWorkspace } from "@/lib/data/workspace-context"
 import { catalogName } from "@/lib/stats"
 import { cnHours, formatPercent } from "@/lib/format"
-import { accuracyOf } from "@/lib/metrics"
+import { accuracyOf, scoreOf } from "@/lib/metrics"
 import type { QuestionBlock, StudySession, TestMock } from "@/lib/types"
 
 export function HistoryView() {
   const { snapshot } = useWorkspace()
   const [tab, setTab] = useState<"sessions" | "blocks" | "tests">("sessions")
+  const tz = snapshot.settings.timezone
 
   const sessions = useMemo(
     () => [...snapshot.sessions].sort((a, b) => b.startAt.localeCompare(a.startAt)),
@@ -31,9 +34,7 @@ export function HistoryView() {
     <div className="space-y-5">
       <div>
         <h1 className="font-heading text-3xl">History</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Correct a mistake and the dashboard updates immediately.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Correct a mistake and Journey updates immediately.</p>
       </div>
       <div className="flex gap-2">
         {(["sessions", "blocks", "tests"] as const).map((t) => (
@@ -47,15 +48,9 @@ export function HistoryView() {
       {tab === "blocks" && blocks.length === 0 ? <Empty text="No question blocks yet." /> : null}
       {tab === "tests" && tests.length === 0 ? <Empty text="No tests or mocks yet." /> : null}
 
-      {tab === "sessions"
-        ? sessions.map((s) => <SessionRow key={s.id} row={s} />)
-        : null}
-      {tab === "blocks"
-        ? blocks.map((s) => <BlockRow key={s.id} row={s} />)
-        : null}
-      {tab === "tests"
-        ? tests.map((s) => <TestRow key={s.id} row={s} />)
-        : null}
+      {tab === "sessions" ? sessions.map((s) => <SessionRow key={s.id} row={s} tz={tz} />) : null}
+      {tab === "blocks" ? blocks.map((s) => <BlockRow key={s.id} row={s} tz={tz} />) : null}
+      {tab === "tests" ? tests.map((s) => <TestRow key={s.id} row={s} tz={tz} />) : null}
     </div>
   )
 }
@@ -64,10 +59,19 @@ function Empty({ text }: { text: string }) {
   return <p className="soft-card p-5 text-sm text-muted-foreground">{text}</p>
 }
 
-function SessionRow({ row }: { row: StudySession }) {
+function stamp(iso: string, tz: string, withTime: boolean) {
+  try {
+    return formatInTimeZone(parseISO(iso), tz, withTime ? "MMM d · h:mm a" : "MMM d")
+  } catch {
+    return iso.slice(0, 16).replace("T", " ")
+  }
+}
+
+function SessionRow({ row, tz }: { row: StudySession; tz: string }) {
   const { snapshot, updateSession, deleteSession } = useWorkspace()
   const [edit, setEdit] = useState(false)
   const [notes, setNotes] = useState(row.notes)
+  const end = row.endAt ? stamp(row.endAt, tz, true).split(" · ")[1] : "live"
   return (
     <article className="soft-card p-4">
       <div className="flex items-start justify-between gap-3">
@@ -76,7 +80,8 @@ function SessionRow({ row }: { row: StudySession }) {
             {catalogName(snapshot, row.subjectId)} · {catalogName(snapshot, row.sourceId)}
           </p>
           <p className="text-sm text-muted-foreground">
-            {row.startAt.slice(0, 16).replace("T", " ")} · {cnHours(row.durationMinutes)} · {row.status}
+            {stamp(row.startAt, tz, true)}
+            {row.endAt ? `–${end}` : ""} · {cnHours(row.durationMinutes)} · {catalogName(snapshot, row.activityId)}
           </p>
         </div>
         <div className="flex gap-2">
@@ -114,7 +119,7 @@ function SessionRow({ row }: { row: StudySession }) {
   )
 }
 
-function BlockRow({ row }: { row: QuestionBlock }) {
+function BlockRow({ row, tz }: { row: QuestionBlock; tz: string }) {
   const { snapshot, updateBlock, deleteBlock } = useWorkspace()
   const [edit, setEdit] = useState(false)
   const [correct, setCorrect] = useState(String(row.correct))
@@ -130,8 +135,9 @@ function BlockRow({ row }: { row: QuestionBlock }) {
             {catalogName(snapshot, row.subjectId)} · {catalogName(snapshot, row.sourceId)}
           </p>
           <p className="text-sm text-muted-foreground">
-            {row.startAt.slice(0, 10)} · {row.total} Q · {formatPercent(acc)} accuracy ·{" "}
-            {formatPercent(row.correct / Math.max(row.total, 1))} score
+            {row.total} questions · {row.correct} correct · {row.incorrect} incorrect · {row.skipped} skipped ·{" "}
+            {formatPercent(acc, 1)}
+            <span className="text-muted-foreground"> · {stamp(row.startAt, tz, false)}</span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -181,22 +187,24 @@ function BlockRow({ row }: { row: QuestionBlock }) {
   )
 }
 
-function TestRow({ row }: { row: TestMock }) {
+function TestRow({ row, tz }: { row: TestMock; tz: string }) {
   const { snapshot, updateTest, deleteTest } = useWorkspace()
   const [edit, setEdit] = useState(false)
   const [correct, setCorrect] = useState(String(row.correct))
   const [incorrect, setIncorrect] = useState(String(row.incorrect))
   const [skipped, setSkipped] = useState(String(row.skipped))
   const [total, setTotal] = useState(String(row.total))
+  const name = row.testName || catalogName(snapshot, row.assessmentTypeId)
   return (
     <article className="soft-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium">
-            {row.testName || catalogName(snapshot, row.assessmentTypeId)} · {catalogName(snapshot, row.subjectId)}
+            {name} · {catalogName(snapshot, row.sourceId)}
           </p>
           <p className="text-sm text-muted-foreground">
-            {row.startAt.slice(0, 10)} · {formatPercent(row.correct / Math.max(row.total, 1))}
+            {row.total} questions · {formatPercent(scoreOf(row), 1)} · {cnHours(row.durationMinutes)} ·{" "}
+            {stamp(row.startAt, tz, false)}
           </p>
         </div>
         <div className="flex gap-2">

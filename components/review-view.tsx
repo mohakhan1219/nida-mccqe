@@ -10,24 +10,41 @@ import { useWorkspace } from "@/lib/data/workspace-context"
 import { catalogByKind } from "@/lib/catalogs"
 import { catalogName } from "@/lib/stats"
 import { newId } from "@/lib/format"
-import { nowIso } from "@/lib/dates"
+import { nowIso, todayKey } from "@/lib/dates"
+import { reviewCycle } from "@/lib/display"
 import type { IncorrectReview } from "@/lib/types"
 
 export function ReviewView() {
-  const { snapshot, stats, upsertReview, deleteReview } = useWorkspace()
+  const { snapshot } = useWorkspace()
+  const today = todayKey(snapshot.settings.timezone)
   const pending = snapshot.reviews.filter((r) => r.status !== "completed")
   const done = snapshot.reviews.filter((r) => r.status === "completed")
+  const dueToday = pending.filter((r) => nextDate(r) === today)
+  const overdue = pending.filter((r) => {
+    const n = nextDate(r)
+    return n != null && n < today
+  })
+  const upcoming = pending.filter((r) => {
+    const n = nextDate(r)
+    return n != null && n > today
+  })
+  const high = pending.filter((r) => r.priority === "high")
   const [open, setOpen] = useState(false)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl">Incorrect review</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A prioritized queue. Overdue {stats.overdueReviews || 0} · pending {stats.pendingReviews || 0} · high{" "}
-          {stats.highPriorityReviews || 0}
-        </p>
+        <h1 className="font-heading text-3xl">Review</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Weakness recovery · 1 / 7 / 21 day cycles</p>
       </div>
+
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <Kpi label="Due today" value={dueToday.length} />
+        <Kpi label="Overdue" value={overdue.length} alert={overdue.length > 0} />
+        <Kpi label="Upcoming" value={upcoming.length} />
+        <Kpi label="Completed" value={done.length} />
+        <Kpi label="High priority" value={high.length} />
+      </section>
 
       {snapshot.reviews.length === 0 ? (
         <div className="soft-card p-6">
@@ -50,7 +67,7 @@ export function ReviewView() {
       {done.length ? (
         <div>
           <p className="mb-2 text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Completed</p>
-          <ul className="space-y-2 opacity-70">
+          <ul className="space-y-2 opacity-80">
             {done.map((r) => (
               <ReviewCard key={r.id} row={r} />
             ))}
@@ -61,8 +78,22 @@ export function ReviewView() {
   )
 }
 
+function nextDate(row: IncorrectReview) {
+  return reviewCycle(row).next ?? row.firstReviewAt
+}
+
+function Kpi({ label, value, alert }: { label: string; value: number; alert?: boolean }) {
+  return (
+    <div className="soft-card px-3 py-3">
+      <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{label}</p>
+      <p className={`mt-1 font-heading text-2xl tabular ${alert ? "text-destructive" : ""}`}>{value}</p>
+    </div>
+  )
+}
+
 function ReviewCard({ row }: { row: IncorrectReview }) {
   const { snapshot, upsertReview, deleteReview } = useWorkspace()
+  const cycle = reviewCycle(row)
   return (
     <li className="soft-card p-4">
       <div className="flex items-start justify-between gap-3">
@@ -71,19 +102,15 @@ function ReviewCard({ row }: { row: IncorrectReview }) {
             {catalogName(snapshot, row.subjectId)}
             {row.topic ? ` · ${row.topic}` : ""}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {row.questionCount} Q · {row.priority} · {row.status.replaceAll("_", " ")}
-            {row.firstReviewAt ? ` · due ${row.firstReviewAt}` : ""}
+          <p className="mt-1 text-sm text-muted-foreground">
+            {catalogName(snapshot, row.providerId)} · {row.priority} · {cycle.label}
+            {cycle.next ? ` · next ${cycle.next}` : ""} · {row.status.replaceAll("_", " ")}
           </p>
-          {row.reason ? <p className="mt-1 text-sm">{row.reason}</p> : null}
+          {row.reason ? <p className="mt-2 text-sm">{row.reason}</p> : null}
         </div>
         <div className="flex gap-2">
           {row.status !== "completed" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void upsertReview({ ...row, status: "completed" })}
-            >
+            <Button size="sm" variant="outline" onClick={() => void upsertReview({ ...row, status: "completed" })}>
               Done
             </Button>
           ) : null}

@@ -106,5 +106,17 @@
 }
 
 .soft-card {
-  @apply rounded-2xl bg-card ring-1 ring-foreground/8 shadow-[0_1px_2px_rgba(40,30,20,0.04),0_8px_24px_rgba(40,30,20,0.04)];
+  @apply rounded-2xl bg-card ring-1 ring-foreground/8 shadow-[0_1px_2px_rgba(40,30,20,0.04),0_10px_28px_rgba(40,30,20,0.05)];
+}
+
+.hero-card {
+  @apply rounded-[1.4rem] bg-card ring-1 ring-foreground/8 shadow-[0_1px_2px_rgba(40,30,20,0.04),0_16px_40px_rgba(40,30,20,0.06)];
+}
+
+.live-card {
+  @apply rounded-[1.4rem] bg-[color-mix(in_oklch,var(--accent)_55%,var(--card))] ring-1 ring-primary/15 shadow-[0_8px_32px_rgba(70,40,90,0.08)];
+}
+
+.ops-panel {
+  @apply rounded-xl bg-card ring-1 ring-foreground/10 shadow-[0_1px_1px_rgba(20,20,30,0.04)];
 }

@@ -21,9 +21,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const authScreen = pathname.startsWith("/login") || pathname.startsWith("/auth")
   if (authScreen) return <>{children}</>
+  const ops = pathname.startsWith("/ops")
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10">
+    <div
+      className={cn(
+        "mx-auto flex min-h-dvh flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10",
+        ops ? "max-w-7xl" : "max-w-6xl"
+      )}
+    >
       <Header />
       <LoadError />
       <main className="flex-1 pt-6">{children}</main>
@@ -66,6 +72,7 @@ function Header() {
   const pathname = usePathname()
   const { snapshot, running, mode } = useWorkspace()
   const [elapsed, setElapsed] = useState(0)
+  const showOps = mode === "preview" || snapshot.profile.role === "admin"
 
   useEffect(() => {
     if (!running) return
@@ -84,9 +91,7 @@ function Header() {
           <p className="font-heading text-[1.65rem] leading-none tracking-tight text-foreground md:text-3xl">
             👩‍⚕️ Dr. Nida Medical OS
           </p>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            From MBBS to Canadian Physician
-          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">From MBBS to Canadian Physician</p>
           <p className="mt-0.5 text-[11px] tracking-[0.18em] text-primary/80 uppercase">
             MCCQE1 Journey • Canada 🇨🇦
           </p>
@@ -113,24 +118,32 @@ function Header() {
       </div>
 
       {running ? (
-        <Link
-          href="/"
-          className="soft-card flex items-center justify-between gap-3 px-4 py-3 text-sm"
-        >
+        <Link href="/" className="soft-card flex items-center justify-between gap-3 px-4 py-3 text-sm">
           <span className="text-foreground">
             Studying {catalogName(snapshot, running.subjectId)}
             <span className="text-muted-foreground"> • live</span>
           </span>
-          <span className="tabular font-medium text-primary">
-            {formatDurationClock(elapsed)}
-          </span>
+          <span className="tabular font-medium text-primary">{formatDurationClock(elapsed)}</span>
         </Link>
       ) : null}
 
       {mode === "preview" ? (
-        <p className="rounded-xl bg-accent/60 px-3 py-2 text-xs text-accent-foreground">
-          Preview mode — add Supabase keys in <code>.env.local</code> to enable private login and
-          cross-device sync. Production data is empty until Nida logs sessions.
+        <p className="rounded-xl bg-accent/50 px-3 py-2 text-xs text-accent-foreground">
+          Preview mode — add Supabase keys in <code>.env.local</code> for private login and sync.
+          {showOps ? (
+            <>
+              {" "}
+              <Link href="/ops" className="underline underline-offset-2">
+                Ops dashboard
+              </Link>
+            </>
+          ) : null}
+        </p>
+      ) : showOps ? (
+        <p className="text-xs text-muted-foreground">
+          <Link href="/ops" className="underline underline-offset-2">
+            Mudasir Dashboard
+          </Link>
         </p>
       ) : null}
     </header>
