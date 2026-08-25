@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { emptySnapshot } from "@/lib/catalogs"
-import { durationMinutes } from "@/lib/dates"
+import { durationMinutes, resolveAssessmentWindow } from "@/lib/dates"
 import { accuracyOf, countsValid, scoreOf, shrinkAccuracy, volumeFactor } from "@/lib/metrics"
 import { computeReadiness } from "@/lib/readiness"
 import { deriveStats } from "@/lib/stats"
@@ -71,6 +71,22 @@ describe("counts and accuracy", () => {
 
   it("computes overnight duration", () => {
     expect(durationMinutes("2026-08-01T22:00:00.000Z", "2026-08-02T02:00:00.000Z")).toBe(240)
+  })
+
+  it("lets a question block save without optional times", () => {
+    const now = new Date("2026-08-25T21:51:00.000Z")
+    const window = resolveAssessmentWindow({ now })
+    expect(new Date(window.endAt).getTime()).toBeGreaterThan(new Date(window.startAt).getTime())
+    expect(durationMinutes(window.startAt, window.endAt)).toBe(1)
+  })
+
+  it("still rejects inverted optional times", () => {
+    expect(() =>
+      resolveAssessmentWindow({
+        startLocal: "2026-08-25T12:00",
+        endLocal: "2026-08-25T11:00",
+      })
+    ).toThrow(/after start time/)
   })
 })
 

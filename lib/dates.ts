@@ -50,6 +50,46 @@ export function durationMinutes(startIso: string, endIso: string) {
   return Math.round((ms / 60000) * 100) / 100
 }
 
+/** Build a start/end window for a question block. Optional times stay optional. */
+export function resolveAssessmentWindow(input: {
+  startLocal?: string
+  endLocal?: string
+  runningStartAt?: string | null
+  now?: Date
+}): { startAt: string; endAt: string } {
+  const now = input.now ?? new Date()
+  const startLocal = input.startLocal?.trim() ?? ""
+  const endLocal = input.endLocal?.trim() ?? ""
+  const parseLocal = (v: string) => {
+    const d = new Date(v)
+    return Number.isFinite(d.getTime()) ? d.getTime() : NaN
+  }
+
+  let startMs: number
+  let endMs: number
+
+  if (startLocal) {
+    startMs = parseLocal(startLocal)
+  } else if (input.runningStartAt) {
+    startMs = new Date(input.runningStartAt).getTime()
+  } else {
+    startMs = now.getTime() - 60_000
+  }
+
+  endMs = endLocal ? parseLocal(endLocal) : now.getTime()
+
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+    throw new Error("Check the start and end times.")
+  }
+  if (endMs <= startMs) {
+    if (startLocal || endLocal) {
+      throw new Error("End time must be after start time.")
+    }
+    endMs = startMs + 60_000
+  }
+  return { startAt: new Date(startMs).toISOString(), endAt: new Date(endMs).toISOString() }
+}
+
 export function quoteIndexForDay(day: string, count: number) {
   if (count <= 0) return 0
   const [y, m, d] = day.split("-").map(Number)

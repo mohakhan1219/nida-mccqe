@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { FieldLabel, NativeSelect } from "@/components/field"
 import { useWorkspace } from "@/lib/data/workspace-context"
 import { catalogByKind } from "@/lib/catalogs"
-import { quoteIndexForDay, todayKey } from "@/lib/dates"
+import { quoteIndexForDay, resolveAssessmentWindow, todayKey } from "@/lib/dates"
 import { cnHours, formatDurationClock, formatPercent } from "@/lib/format"
 import { catalogName } from "@/lib/stats"
 import { confidenceLabel, stateLabel } from "@/lib/readiness"
@@ -127,8 +127,11 @@ export function TodayView() {
       const c = Number(correct)
       const ic = Number(incorrect)
       const sk = Number(skipped)
-      const startAt = qStart ? isoFromLocal(qStart) : running?.startAt ?? new Date().toISOString()
-      const endAt = qEnd ? isoFromLocal(qEnd) : new Date().toISOString()
+      const { startAt, endAt } = resolveAssessmentWindow({
+        startLocal: qStart,
+        endLocal: qEnd,
+        runningStartAt: running?.startAt,
+      })
       const mock = isMockType(qType, snapshot.catalogs)
       await saveAssessment({
         subjectId: qSubject,
