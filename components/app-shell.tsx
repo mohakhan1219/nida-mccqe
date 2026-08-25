@@ -1,0 +1,138 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { BookOpen, ClipboardList, LayoutDashboard, Settings2, Sun } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useWorkspace } from "@/lib/data/workspace-context"
+import { formatDurationClock } from "@/lib/format"
+import { catalogName } from "@/lib/stats"
+import { useEffect, useState } from "react"
+
+const NAV = [
+  { href: "/", label: "Today", icon: Sun },
+  { href: "/journey", label: "Journey", icon: LayoutDashboard },
+  { href: "/review", label: "Review", icon: BookOpen },
+  { href: "/history", label: "History", icon: ClipboardList },
+  { href: "/settings", label: "Settings", icon: Settings2 },
+]
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const authScreen = pathname.startsWith("/login") || pathname.startsWith("/auth")
+  if (authScreen) return <>{children}</>
+
+  return (
+    <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10">
+      <Header />
+      <LoadError />
+      <main className="flex-1 pt-6">{children}</main>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-6xl justify-around px-2 py-2">
+          {NAV.map((item) => {
+            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 px-3 py-1 text-[11px]",
+                  active ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <Icon className="size-4" />
+                {item.label}
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+    </div>
+  )
+}
+
+function LoadError() {
+  const { error } = useWorkspace()
+  if (!error) return null
+  return (
+    <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      {error}
+    </p>
+  )
+}
+
+function Header() {
+  const pathname = usePathname()
+  const { snapshot, running, mode } = useWorkspace()
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    if (!running) return
+    const tick = () => {
+      setElapsed((Date.now() - new Date(running.startAt).getTime()) / 1000)
+    }
+    tick()
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [running])
+
+  return (
+    <header className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-heading text-[1.65rem] leading-none tracking-tight text-foreground md:text-3xl">
+            👩‍⚕️ Dr. Nida Medical OS
+          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            From MBBS to Canadian Physician
+          </p>
+          <p className="mt-0.5 text-[11px] tracking-[0.18em] text-primary/80 uppercase">
+            MCCQE1 Journey • Canada 🇨🇦
+          </p>
+        </div>
+        <nav className="hidden items-center gap-1 md:flex">
+          {NAV.map((item) => {
+            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-sm transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+      </div>
+
+      {running ? (
+        <Link
+          href="/"
+          className="soft-card flex items-center justify-between gap-3 px-4 py-3 text-sm"
+        >
+          <span className="text-foreground">
+            Studying {catalogName(snapshot, running.subjectId)}
+            <span className="text-muted-foreground"> • live</span>
+          </span>
+          <span className="tabular font-medium text-primary">
+            {formatDurationClock(elapsed)}
+          </span>
+        </Link>
+      ) : null}
+
+      {mode === "preview" ? (
+        <p className="rounded-xl bg-accent/60 px-3 py-2 text-xs text-accent-foreground">
+          Preview mode — add Supabase keys in <code>.env.local</code> to enable private login and
+          cross-device sync. Production data is empty until Nida logs sessions.
+        </p>
+      ) : null}
+    </header>
+  )
+}
