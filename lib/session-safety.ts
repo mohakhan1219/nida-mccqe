@@ -62,8 +62,9 @@ export function isStaleRunning(
   timeZone: string,
   now = new Date()
 ) {
-  if (!needsConfirmation(session, settings, now) || !session) return false
-  return dayKey(session.startAt, timeZone) < todayKey(timeZone)
+  if (!session || session.status !== "running") return false
+  if (!needsConfirmation(session, settings, now)) return false
+  return dayKey(session.startAt, timeZone) < todayKey(timeZone, now)
 }
 
 export function sessionSafetyLabel(

@@ -92,6 +92,16 @@ describe("session safety credits", () => {
     expect(creditedDurationMinutes(done, settings, morning)).toBe(180)
   })
 
+  it("treats a previous-calendar-day long session as stale, not a same-day 4h session", () => {
+    const overnight = running("2026-08-25T19:00:00.000Z")
+    const morning = new Date("2026-08-26T09:00:00.000Z")
+    expect(isStaleRunning(overnight, settings, "UTC", morning)).toBe(true)
+    const sameDayLong = running("2026-08-26T00:00:00.000Z")
+    const later = new Date("2026-08-26T13:00:00.000Z")
+    expect(needsConfirmation(sameDayLong, settings, later)).toBe(true)
+    expect(isStaleRunning(sameDayLong, settings, "UTC", later)).toBe(false)
+  })
+
   it("warns at 3 hours without blocking, and does not warn before that", () => {
     const start = "2026-08-26T10:00:00.000Z"
     expect(needsWarning(running(start), settings, new Date("2026-08-26T12:59:00.000Z"))).toBe(false)

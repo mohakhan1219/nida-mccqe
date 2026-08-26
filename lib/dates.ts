@@ -13,8 +13,8 @@ export function dayKey(iso: string, timeZone: string) {
   return formatInTimeZone(parseISO(iso), timeZone, "yyyy-MM-dd")
 }
 
-export function todayKey(timeZone: string) {
-  return formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd")
+export function todayKey(timeZone: string, now: Date = new Date()) {
+  return formatInTimeZone(now, timeZone, "yyyy-MM-dd")
 }
 
 export function weekStartKey(isoOrNow: string | Date, timeZone: string) {

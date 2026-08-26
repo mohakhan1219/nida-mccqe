@@ -8,6 +8,8 @@ import { FieldLabel, NativeSelect } from "@/components/field"
 import { useWorkspace } from "@/lib/data/workspace-context"
 import { catalogByKind } from "@/lib/catalogs"
 import { quoteIndexForDay, resolveAssessmentWindow, todayKey } from "@/lib/dates"
+import { formatInTimeZone } from "date-fns-tz"
+import { parseISO } from "date-fns"
 import { cnHours, formatDurationClock, formatHoursMinutes, formatPercent } from "@/lib/format"
 import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
 import { catalogName } from "@/lib/stats"
@@ -35,6 +37,14 @@ import {
 
 function isoFromLocal(v: string) {
   return new Date(v).toISOString()
+}
+
+function formatSessionStamp(iso: string, timeZone: string) {
+  try {
+    return formatInTimeZone(parseISO(iso), timeZone, "MMM d · h:mm a")
+  } catch {
+    return toDatetimeLocalValue(iso).replace("T", " ")
+  }
 }
 
 export function TodayView() {
@@ -558,7 +568,7 @@ export function TodayView() {
                 {catalogName(snapshot, running.activityId)}
               </p>
               <p className="text-muted-foreground">
-                Started at {toDatetimeLocalValue(running.startAt).replace("T", " ")}
+                Started at {formatSessionStamp(running.startAt, snapshot.settings.timezone)}
               </p>
               <p className="text-muted-foreground">
                 Raw elapsed time {formatHoursMinutes(elapsedMinutes)}
@@ -614,7 +624,7 @@ export function TodayView() {
                 {catalogName(snapshot, running.subjectId)} · {catalogName(snapshot, running.sourceId)}
               </p>
               <p className="text-muted-foreground">
-                Started: {toDatetimeLocalValue(running.startAt).replace("T", " ")}
+                Started: {formatSessionStamp(running.startAt, snapshot.settings.timezone)}
               </p>
               <p className="text-muted-foreground">
                 Current elapsed: {formatHoursMinutes(elapsedMinutes)}
