@@ -132,15 +132,15 @@
   background-repeat: no-repeat;
   background-position:
     center top,
-    left -4% top 4%,
-    right -6% top 16%,
-    left 3% bottom 8%;
+    left -2% top 2%,
+    right -4% top 12%,
+    left 2% bottom 6%;
   background-size:
     100% auto,
+    min(36vw, 420px) auto,
     min(34vw, 400px) auto,
-    min(32vw, 380px) auto,
-    min(46vw, 520px) auto;
-  opacity: 0.55;
+    min(48vw, 540px) auto;
+  opacity: 0.88;
 }
 
 .page-backdrop-today::after {
@@ -148,7 +148,7 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 78% 82% at 50% 42%, var(--background) 28%, color-mix(in oklch, var(--background) 82%, transparent) 52%, transparent 74%);
+    radial-gradient(ellipse 56% 64% at 50% 40%, var(--background) 18%, color-mix(in oklch, var(--background) 75%, transparent) 46%, transparent 68%);
 }
 
 .page-backdrop-journey {
@@ -190,12 +190,12 @@
 
 @media (min-width: 768px) and (max-width: 1100px) {
   .page-backdrop-today {
-    opacity: 0.28;
+    opacity: 0.5;
     background-size:
       100% auto,
-      min(22vw, 220px) auto,
-      min(20vw, 200px) auto,
-      min(32vw, 280px) auto;
+      min(26vw, 260px) auto,
+      min(24vw, 240px) auto,
+      min(36vw, 300px) auto;
   }
   .page-backdrop-journey {
     opacity: 0.16;
