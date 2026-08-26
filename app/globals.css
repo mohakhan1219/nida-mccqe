@@ -123,70 +123,18 @@
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  --frame-inset: clamp(28px, 2.2vw, 44px);
-  --frame-width: min(24vw, max(0px, calc((100vw - 72rem) / 2 + 56px)), 340px);
 }
 
-.bd-img {
+.bd-atmosphere {
   position: absolute;
-  max-width: none;
-  height: auto;
-  max-height: 68vh;
-  object-fit: contain;
-  user-select: none;
-}
-
-.page-backdrop-today .bd-anatomy,
-.page-backdrop-journey .bd-anatomy {
-  mix-blend-mode: multiply;
-}
-
-.page-backdrop-today .bd-anatomy {
-  top: 4.6rem;
-  left: var(--frame-inset);
-  width: min(22vw, 280px);
-  max-height: 52vh;
-  object-position: left top;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   opacity: 0.58;
-  -webkit-mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
-  mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
-}
-
-.page-backdrop-today .bd-shelf {
-  top: 4.4rem;
-  right: var(--frame-inset);
-  width: min(24vw, 300px);
-  max-height: 46vh;
-  object-position: right top;
-  opacity: 0.72;
   mix-blend-mode: multiply;
-  -webkit-mask-image: radial-gradient(ellipse 105% 90% at 96% 6%, #000 0%, #000 36%, transparent 74%);
-  mask-image: radial-gradient(ellipse 105% 90% at 96% 6%, #000 0%, #000 36%, transparent 74%);
-}
-
-.page-backdrop-today .bd-left {
-  bottom: var(--frame-inset);
-  left: var(--frame-inset);
-  width: var(--frame-width);
-  object-position: left bottom;
-  opacity: 0.84;
-}
-
-.page-backdrop-today .bd-right {
-  bottom: var(--frame-inset);
-  right: var(--frame-inset);
-  width: var(--frame-width);
-  object-position: right bottom;
-  opacity: 0.82;
-}
-
-.page-backdrop-today .bd-ecg {
-  left: calc(var(--frame-inset) + 8px);
-  bottom: 28%;
-  width: min(28vw, 320px);
-  max-height: none;
-  color: var(--primary);
-  opacity: 0.18;
+  user-select: none;
 }
 
 .page-backdrop-today .bd-wash {
@@ -194,84 +142,39 @@
   inset: 0;
   background:
     radial-gradient(
-      ellipse 48% 56% at 50% 36%,
-      var(--background) 8%,
-      color-mix(in oklch, var(--background) 82%, transparent) 44%,
-      transparent 72%
+      ellipse 54% 62% at 50% 38%,
+      var(--background) 12%,
+      color-mix(in oklch, var(--background) 78%, transparent) 48%,
+      transparent 74%
     );
-}
-
-.page-backdrop-journey .bd-anatomy {
-  top: 5.5rem;
-  left: var(--frame-inset);
-  width: min(18vw, 220px);
-  max-height: 42vh;
-  object-position: left top;
-  opacity: 0.32;
-  -webkit-mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
-  mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
-}
-
-.page-backdrop-journey .bd-left {
-  bottom: var(--frame-inset);
-  left: var(--frame-inset);
-  width: min(18vw, 240px);
-  object-position: left bottom;
-  opacity: 0.3;
-}
-
-.page-backdrop-journey .bd-ecg,
-.page-backdrop-journey .bd-shelf,
-.page-backdrop-journey .bd-right {
-  display: none;
 }
 
 .page-backdrop-journey .bd-wash {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 78% 80% at 50% 40%, var(--background) 38%, transparent 78%);
+    radial-gradient(ellipse 80% 70% at 50% 0%, color-mix(in oklch, var(--primary) 6%, transparent), transparent 58%);
 }
 
 @media (max-width: 767px) {
-  .bd-img {
-    display: none;
-  }
-  .bd-wash {
+  .bd-atmosphere,
+  .page-backdrop-today .bd-wash {
     display: none;
   }
 }
 
-@media (min-width: 768px) and (max-width: 1279px) {
-  .page-backdrop-today .bd-left,
-  .page-backdrop-today .bd-right,
-  .page-backdrop-today .bd-ecg,
-  .page-backdrop-journey .bd-left {
-    display: none;
+@media (min-width: 768px) and (max-width: 1099px) {
+  .bd-atmosphere {
+    opacity: 0.22;
   }
-  .page-backdrop-today .bd-anatomy,
-  .page-backdrop-journey .bd-anatomy {
-    top: 5rem;
-    left: 12px;
-    width: min(150px, 16vw);
-    max-height: 28vh;
-    opacity: 0.32;
-  }
-  .page-backdrop-today .bd-shelf {
-    top: 4.75rem;
-    right: 12px;
-    width: min(170px, 18vw);
-    max-height: 24vh;
-    opacity: 0.34;
-  }
-}
-
-@media (min-width: 1600px) {
-  .page-backdrop {
-    --frame-inset: clamp(32px, 2.4vw, 52px);
-  }
-  .page-backdrop-today {
-    --frame-width: min(26vw, calc((100vw - 72rem) / 2 + 40px), 360px);
+  .page-backdrop-today .bd-wash {
+    background:
+      radial-gradient(
+        ellipse 72% 70% at 50% 40%,
+        var(--background) 28%,
+        color-mix(in oklch, var(--background) 88%, transparent) 62%,
+        transparent 82%
+      );
   }
 }
 
