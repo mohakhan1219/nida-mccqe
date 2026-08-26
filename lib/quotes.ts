@@ -10,7 +10,7 @@ export const QUOTES: { theme: string; message: string }[] = [
   { theme: "weak-subjects", message: "The subject that feels least natural is often the one that will raise your floor the most." },
   { theme: "exam-prep", message: "Readiness is not a feeling. It is coverage, accuracy, and calm under timed conditions." },
   { theme: "milestones", message: "You do not need a booked date to take this seriously. The work itself is the commitment." },
-  { theme: "discipline", message: "Punch in. One honest session. Punch out. That is how a Canadian practice is earned." },
+  { theme: "discipline", message: "Start the session. One honest block. End it when you are done. That is how a Canadian practice is earned." },
   { theme: "consistency", message: "Streaks are not trophies. They are proof that Nida showed up for Nida." },
   { theme: "medicine", message: "Ethics, public health, and communication are not extras here. They are the Canadian exam’s grammar." },
   { theme: "canadian-journey", message: "You are not leaving your MBBS behind. You are translating it into a system that will trust you with lives." },

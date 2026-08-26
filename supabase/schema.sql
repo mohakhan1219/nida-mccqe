@@ -53,6 +53,7 @@ create table if not exists public.study_sessions (
   entry_mode text not null check (entry_mode in ('timer', 'manual')),
   status text not null check (status in ('running', 'completed')),
   notes text not null default '',
+  confirmed_through_at timestamptz,
   linked_assessment_id text,
   planned boolean not null default false,
   confidence int,
@@ -291,7 +292,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Realtime for punch-in and cross-device sync (safe to re-run)
+-- Realtime for live sessions and cross-device sync (safe to re-run)
 do $$
 declare
   t text;

@@ -10,6 +10,14 @@ export function cnHours(minutes: number | null | undefined) {
   return `${rounded.toFixed(1)}h`
 }
 
+export function formatHoursMinutes(totalMinutes: number) {
+  const safe = Math.max(0, totalMinutes)
+  const h = Math.floor(safe / 60)
+  const m = Math.round(safe % 60)
+  if (h <= 0) return `${m}m`
+  return `${h}h ${String(m).padStart(2, "0")}m`
+}
+
 export function formatDurationClock(totalSeconds: number) {
   const s = Math.max(0, Math.floor(totalSeconds))
   const h = Math.floor(s / 3600)

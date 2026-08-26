@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useWorkspace } from "@/lib/data/workspace-context"
 import { catalogByKind } from "@/lib/catalogs"
 import { catalogName } from "@/lib/stats"
-import { cnHours, formatPercent } from "@/lib/format"
+import { cnHours, formatHoursMinutes, formatPercent } from "@/lib/format"
 import { accuracyOf, scoreOf } from "@/lib/metrics"
 import { todayKey } from "@/lib/dates"
 import {
@@ -39,6 +39,7 @@ import {
 } from "@/components/mini-charts"
 import type { SubjectHealth } from "@/lib/stats"
 import { cn } from "@/lib/utils"
+import { needsConfirmation, rawElapsedMinutes } from "@/lib/session-safety"
 
 const CHART_H = 128
 
@@ -50,7 +51,7 @@ function attentionRank(s: SubjectHealth) {
 }
 
 export function OpsDashboard() {
-  const { snapshot, stats, readiness, mode, loading } = useWorkspace()
+  const { snapshot, stats, readiness, mode, loading, running } = useWorkspace()
   const router = useRouter()
   const [filters, setFilters] = useState(defaultOpsFilters)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -101,6 +102,12 @@ export function OpsDashboard() {
     (readiness.examDate && readiness.state !== "ready_to_book" && readiness.state !== "getting_close")
   ) {
     chips.push({ label: "Needs Attention", tone: "warn" })
+  }
+  if (running && needsConfirmation(running, snapshot.settings)) {
+    chips.push({
+      label: `⚠ Active session · ${formatHoursMinutes(rawElapsedMinutes(running))} · confirmation required`,
+      tone: "warn",
+    })
   }
 
   const subjects = catalogByKind(snapshot.catalogs, "subject")

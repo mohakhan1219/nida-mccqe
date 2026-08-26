@@ -8,13 +8,30 @@ import { FieldLabel, NativeSelect } from "@/components/field"
 import { useWorkspace } from "@/lib/data/workspace-context"
 import { catalogByKind } from "@/lib/catalogs"
 import { quoteIndexForDay, resolveAssessmentWindow, todayKey } from "@/lib/dates"
-import { cnHours, formatDurationClock, formatPercent } from "@/lib/format"
+import { cnHours, formatDurationClock, formatHoursMinutes, formatPercent } from "@/lib/format"
 import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
 import { catalogName } from "@/lib/stats"
 import { quoteContext, selectDailyQuote } from "@/lib/quote-context"
 import { evidenceBandLabel, goalCountCopy, goalHoursCopy, overallStageLabel, showReadinessPercent, warmCopy } from "@/lib/display"
-import { Clock, Heart, ListChecks, Target } from "lucide-react"
+import {
+  fromDatetimeLocalValue,
+  isStaleRunning,
+  needsConfirmation,
+  needsWarning,
+  rawElapsedMinutes,
+  sessionSafetyLabel,
+  toDatetimeLocalValue,
+} from "@/lib/session-safety"
+import { Clock, Heart, HeartPulse, ListChecks, Square, Target } from "lucide-react"
 import { NidaPortrait } from "@/components/nida-portrait"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 function isoFromLocal(v: string) {
   return new Date(v).toISOString()
@@ -28,6 +45,7 @@ export function TodayView() {
     running,
     punchIn,
     punchOut,
+    confirmStillStudying,
     discardRunning,
     saveManualSession,
     saveAssessment,
@@ -47,7 +65,6 @@ export function TodayView() {
   const [startLocal, setStartLocal] = useState("")
   const [endLocal, setEndLocal] = useState("")
   const [elapsed, setElapsed] = useState(0)
-  const [warned, setWarned] = useState(false)
 
   const [qSubject, setQSubject] = useState(subjects[0]?.id ?? "")
   const [qSource, setQSource] = useState(sources[0]?.id ?? "")
@@ -63,7 +80,13 @@ export function TodayView() {
   const [countAsSession, setCountAsSession] = useState(true)
   const [sendReview, setSendReview] = useState(false)
   const [advanced, setAdvanced] = useState(false)
+  const [cover, setCover] = useState("")
+  const [askCover, setAskCover] = useState(false)
+  const [stopLocal, setStopLocal] = useState("")
+  const [warningDismissed, setWarningDismissed] = useState(false)
   const [showQuestions, setShowQuestions] = useState(false)
+  const [earlierMode, setEarlierMode] = useState(false)
+  const [pendingEnd, setPendingEnd] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     if (!subjectId && subjects[0]) setSubjectId(subjects[0].id)
@@ -77,7 +100,9 @@ export function TodayView() {
   useEffect(() => {
     if (!running) {
       setElapsed(0)
-      setWarned(false)
+      setWarningDismissed(false)
+      setEarlierMode(false)
+      setStopLocal("")
       return
     }
     const tick = () => setElapsed((Date.now() - new Date(running.startAt).getTime()) / 1000)
@@ -87,13 +112,10 @@ export function TodayView() {
   }, [running])
 
   useEffect(() => {
-    if (!running || warned) return
-    const limit = snapshot.settings.warnSessionHours * 3600
-    if (limit > 0 && elapsed >= limit) {
-      setWarned(true)
-      toast.message("Long session", { description: "Consider punching out and resting." })
-    }
-  }, [elapsed, running, warned, snapshot.settings.warnSessionHours])
+    setWarningDismissed(false)
+    setEarlierMode(false)
+    setStopLocal("")
+  }, [running?.id])
 
   const day = todayKey(snapshot.settings.timezone)
   const quote = useMemo(() => {
@@ -104,7 +126,7 @@ export function TodayView() {
   const nextAction = running
     ? `You're live — stay with ${catalogName(snapshot, running.subjectId)}.`
     : stats.todayHours === 0 && stats.todayQuestions === 0
-      ? "Punch in for today's first session."
+      ? "Start today's first study session."
       : warmCopy(readiness.nextFocus)
 
   const mock = isMockType(qType, snapshot.catalogs)
@@ -120,21 +142,51 @@ export function TodayView() {
   const liveScore = liveReady ? scoreOf(liveCounts) : null
   const liveAttemptedPct = liveReady ? liveAttempted / liveCounts.total : null
 
-  async function onPunchIn() {
+  const confirmOpen = needsConfirmation(running, snapshot.settings)
+  const staleOpen = isStaleRunning(running, snapshot.settings, snapshot.settings.timezone)
+  const showWarning = needsWarning(running, snapshot.settings) && !warningDismissed
+  const elapsedMinutes = running ? rawElapsedMinutes(running) : elapsed / 60
+
+  async function onStartSession() {
     try {
       await punchIn({ subjectId, sourceId, activityId, topic })
       toast.success("Session started")
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not punch in")
+      toast.error(e instanceof Error ? e.message : "Could not start session")
     }
   }
 
-  async function onPunchOut() {
+  async function onEndSession(endAt?: string) {
     try {
-      await punchOut()
+      await punchOut({
+        endAt,
+        topic: cover.trim() || undefined,
+      })
       toast.success("Session saved")
+      setAskCover(false)
+      setCover("")
+      setStopLocal("")
+      setEarlierMode(false)
+      setPendingEnd(undefined)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not punch out")
+      toast.error(e instanceof Error ? e.message : "Could not end session")
+    }
+  }
+
+  function requestEnd(endAt?: string) {
+    setPendingEnd(endAt)
+    setCover(topic || running?.topic || "")
+    setAskCover(true)
+  }
+
+  async function onStillStudying() {
+    try {
+      await confirmStillStudying()
+      setWarningDismissed(true)
+      setEarlierMode(false)
+      toast.success("Keep going — the timer is still running.")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not confirm")
     }
   }
 
@@ -264,20 +316,44 @@ export function TodayView() {
             </div>
             <p className="font-heading text-3xl tabular text-primary">{formatDurationClock(elapsed)}</p>
           </div>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button className="h-12 min-w-36 px-6 text-base" onClick={() => void onPunchOut()}>
-              Punch Out
-            </Button>
-            <Button variant="ghost" className="h-12" onClick={() => void discardRunning()}>
-              Discard
-            </Button>
+          <div className="mt-5 space-y-3">
+            {showWarning ? (
+              <div className="rounded-xl border border-primary/25 bg-accent/70 px-3.5 py-3 text-sm">
+                <p>
+                  You&apos;ve been studying for {formatHoursMinutes(elapsedMinutes)}. Still studying?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" className="h-9" onClick={() => setWarningDismissed(true)}>
+                    Still Studying
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-9" onClick={() => requestEnd()}>
+                    End Session
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button className="h-12 min-w-36 gap-2 px-6 text-base" onClick={() => requestEnd()}>
+                <Square className="size-4" />
+                End Session
+              </Button>
+              <Button variant="ghost" className="h-12" onClick={() => void discardRunning()}>
+                Discard
+              </Button>
+            </div>
+            {sessionSafetyLabel(running, snapshot.settings) === "Needs Confirmation" ? (
+              <p className="text-xs text-muted-foreground">Needs confirmation — analytics are capped until you confirm.</p>
+            ) : null}
           </div>
         </section>
       ) : (
         <section className="soft-card p-5 md:p-6">
           <div className="mb-4">
             <h2 className="font-heading text-xl tracking-tight">Study</h2>
-            <p className="text-sm text-muted-foreground">Subject, source, activity. Punch in.</p>
+            <p className="text-sm text-muted-foreground">
+              Choose your subject, source and activity, then start your session. The timer keeps running if you close
+              the app or lock your phone.
+            </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
@@ -316,8 +392,9 @@ export function TodayView() {
             <Input className="h-11" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. ACS, consent" />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button className="h-12 min-w-36 px-6 text-base" onClick={() => void onPunchIn()} disabled={!subjectId}>
-              Punch In
+            <Button className="h-12 min-w-36 gap-2 px-6 text-base" onClick={() => void onStartSession()} disabled={!subjectId}>
+              <HeartPulse className="size-4" />
+              Start Session
             </Button>
             <Button variant="ghost" className="h-12" onClick={() => setManual((v) => !v)}>
               {manual ? "Hide manual times" : "Enter times manually"}
@@ -463,8 +540,145 @@ export function TodayView() {
       ) : null}
 
       {empty ? (
-        <p className="px-1 text-sm text-muted-foreground">Your journey starts here. Punch in when you are ready.</p>
+        <p className="px-1 text-sm text-muted-foreground">
+          Your journey starts here. Start today&apos;s first study session when you are ready.
+        </p>
       ) : null}
+
+      <Dialog open={staleOpen && !askCover} onOpenChange={() => undefined}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>You still have an open session from yesterday.</DialogTitle>
+            <DialogDescription>When did you finish?</DialogDescription>
+          </DialogHeader>
+          {running ? (
+            <div className="space-y-2 text-sm">
+              <p>
+                {catalogName(snapshot, running.subjectId)} · {catalogName(snapshot, running.sourceId)} ·{" "}
+                {catalogName(snapshot, running.activityId)}
+              </p>
+              <p className="text-muted-foreground">
+                Started at {toDatetimeLocalValue(running.startAt).replace("T", " ")}
+              </p>
+              <p className="text-muted-foreground">
+                Raw elapsed time {formatHoursMinutes(elapsedMinutes)}
+              </p>
+              {earlierMode ? (
+                <div>
+                  <FieldLabel>Actual end time</FieldLabel>
+                  <Input
+                    type="datetime-local"
+                    className="h-11"
+                    value={stopLocal}
+                    onChange={(e) => setStopLocal(e.target.value)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter className="sm:flex-col sm:items-stretch">
+            {earlierMode ? (
+              <Button
+                onClick={() => {
+                  try {
+                    requestEnd(fromDatetimeLocalValue(stopLocal))
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Enter a valid time.")
+                  }
+                }}
+              >
+                Save actual end
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setEarlierMode(true)}>
+                Enter actual end time
+              </Button>
+            )}
+            <Button onClick={() => requestEnd()}>End now</Button>
+            <Button variant="secondary" onClick={() => void onStillStudying()}>
+              I am still studying
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmOpen && !staleOpen && !askCover} onOpenChange={() => undefined}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Session needs confirmation</DialogTitle>
+            <DialogDescription>Were you studying continuously?</DialogDescription>
+          </DialogHeader>
+          {running ? (
+            <div className="space-y-2 text-sm">
+              <p>
+                {catalogName(snapshot, running.subjectId)} · {catalogName(snapshot, running.sourceId)}
+              </p>
+              <p className="text-muted-foreground">
+                Started: {toDatetimeLocalValue(running.startAt).replace("T", " ")}
+              </p>
+              <p className="text-muted-foreground">
+                Current elapsed: {formatHoursMinutes(elapsedMinutes)}
+              </p>
+              {earlierMode ? (
+                <div>
+                  <FieldLabel>When did you actually stop?</FieldLabel>
+                  <Input
+                    type="datetime-local"
+                    className="h-11"
+                    value={stopLocal}
+                    onChange={(e) => setStopLocal(e.target.value)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter className="sm:flex-col sm:items-stretch">
+            <Button onClick={() => void onStillStudying()}>Still Studying</Button>
+            <Button variant="outline" onClick={() => requestEnd()}>
+              End Session Now
+            </Button>
+            {earlierMode ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  try {
+                    requestEnd(fromDatetimeLocalValue(stopLocal))
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Enter a valid time.")
+                  }
+                }}
+              >
+                Save earlier end
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => setEarlierMode(true)}>
+                I Stopped Earlier
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={askCover} onOpenChange={setAskCover}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>What did you cover?</DialogTitle>
+            <DialogDescription>Optional. Reuses Topic — skip if you already logged it.</DialogDescription>
+          </DialogHeader>
+          <Input
+            className="h-11"
+            value={cover}
+            onChange={(e) => setCover(e.target.value)}
+            placeholder="e.g. AKI + nephrotic syndrome"
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => void onEndSession(pendingEnd)}>
+              Skip
+            </Button>
+            <Button onClick={() => void onEndSession(pendingEnd)}>Save session</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -484,7 +698,7 @@ function Mini({
     <div className="soft-card px-3.5 py-3.5 md:px-4">
       <div className="flex items-start justify-between gap-2">
         <p className="kicker text-[10px] tracking-[0.14em] text-muted-foreground">{label}</p>
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full text-primary ring-1 ring-primary/25">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/35">
           <Icon className="size-3.5" strokeWidth={1.75} aria-hidden />
         </span>
       </div>

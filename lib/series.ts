@@ -1,3 +1,4 @@
+import { creditedDurationMinutes } from "@/lib/session-safety"
 import { addDaysKey, dayKey, todayKey } from "@/lib/dates"
 import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
 import { computeReadiness } from "@/lib/readiness"
@@ -21,10 +22,11 @@ export function dailyStudyHours(snapshot: WorkspaceSnapshot, startKey: string, e
   const tz = snapshot.settings.timezone
   const byDay = new Map<string, number>()
   for (const s of snapshot.sessions) {
-    if (s.status !== "completed") continue
+    const minutes = creditedDurationMinutes(s, snapshot.settings)
+    if (minutes <= 0) continue
     const k = dayKey(s.startAt, tz)
     if (k < startKey || k > endKey) continue
-    byDay.set(k, (byDay.get(k) ?? 0) + (s.durationMinutes ?? 0) / 60)
+    byDay.set(k, (byDay.get(k) ?? 0) + minutes / 60)
   }
   return enumerateDays(startKey, endKey).map((date) => ({
     date,

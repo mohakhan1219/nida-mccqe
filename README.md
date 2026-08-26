@@ -8,7 +8,7 @@ Nida opens the app on her iPhone, iPad, or laptop, logs a session in about a min
 
 ## What this is
 
-- **Today** — Punch In / Punch Out (or manual times) and optional question/test logging
+- **Today** — Start Session / End Session (or manual times) and optional question/test logging
 - **Journey** — executive readiness, weekly targets, recommended focus, subject board
 - **Review** — incorrect-review queue with 1 / 7 / 21 day intervals
 - **History** — edit or delete any record; calculations update immediately
@@ -64,7 +64,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 1. Open the live URL in **Safari**.
 2. Share → **Add to Home Screen**.
-3. Sign in once. Punch In and saves go to Postgres, so iPad and laptop see the same record.
+3. Sign in once. Start Session and saves go to Postgres, so iPad and laptop see the same record.
 
 Password reset is on the sign-in screen.
 

@@ -169,6 +169,8 @@ export const DEFAULT_SETTINGS: Settings = {
   highConfidenceMin: 75,
   moderateConfidenceMin: 50,
   warnSessionHours: 8,
+  longSessionWarningHours: 3,
+  confirmSessionHours: 4,
   weights: {
     accuracy: 18,
     recentAccuracy: 18,

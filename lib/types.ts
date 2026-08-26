@@ -67,6 +67,8 @@ export type Settings = {
   moderateConfidenceMin: number
   weights: ReadinessWeights
   warnSessionHours: number
+  longSessionWarningHours: number
+  confirmSessionHours: number
 }
 
 export type StudySession = {
@@ -85,6 +87,7 @@ export type StudySession = {
   planned: boolean
   confidence: number | null
   energy: number | null
+  confirmedThroughAt: string | null
   createdAt: string
   updatedAt: string
 }

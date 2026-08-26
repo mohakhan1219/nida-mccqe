@@ -10,6 +10,7 @@ import type {
 } from "@/lib/types"
 import { dayKey, daysBetweenKeys, todayKey, weekStartKey } from "@/lib/dates"
 import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
+import { creditedDurationMinutes } from "@/lib/session-safety"
 
 export type SubjectHealth = {
   id: string
@@ -113,15 +114,18 @@ function period(
   key: string,
   start: string,
   end: string,
-  snapshot: WorkspaceSnapshot
+  snapshot: WorkspaceSnapshot,
+  now: Date
 ): PeriodTotals {
   const tz = snapshot.settings.timezone
-  const sessions = snapshot.sessions.filter(
-    (s) => s.status === "completed" && inRange(s.startAt, start, end, tz)
-  )
+  const sessions = snapshot.sessions.filter((s) => {
+    if (!inRange(s.startAt, start, end, tz)) return false
+    if (s.status === "completed") return true
+    return s.status === "running" && creditedDurationMinutes(s, snapshot.settings, now) > 0
+  })
   const blocks = snapshot.blocks.filter((b) => inRange(b.startAt, start, end, tz))
   const tests = snapshot.tests.filter((t) => inRange(t.startAt, start, end, tz))
-  const hours = sessions.reduce((a, s) => a + (s.durationMinutes ?? 0), 0) / 60
+  const hours = sessions.reduce((a, s) => a + creditedDurationMinutes(s, snapshot.settings, now), 0) / 60
   const questions = blocks.reduce((a, b) => a + b.total, 0)
   const correct = blocks.reduce((a, b) => a + b.correct, 0)
   const incorrect = blocks.reduce((a, b) => a + b.incorrect, 0)
@@ -200,9 +204,9 @@ export function deriveStats(snapshot: WorkspaceSnapshot, now = new Date()): Deri
   const monthEnd = today
 
   const completed = sessions.filter((s) => s.status === "completed")
-  const todaySessions = completed.filter((s) => dayKey(s.startAt, tz) === today)
+  const todaySessions = sessions.filter((s) => dayKey(s.startAt, tz) === today && (s.status === "completed" || s.status === "running"))
   const todayBlocks = blocks.filter((b) => dayKey(b.startAt, tz) === today)
-  const todayHours = todaySessions.reduce((a, s) => a + (s.durationMinutes ?? 0), 0) / 60
+  const todayHours = todaySessions.reduce((a, s) => a + creditedDurationMinutes(s, settings, now), 0) / 60
   const todayQ = todayBlocks.reduce((a, b) => a + b.total, 0)
   const todayCI = sumCI(todayBlocks)
 
@@ -219,7 +223,7 @@ export function deriveStats(snapshot: WorkspaceSnapshot, now = new Date()): Deri
   const priorCI = sumCI(priorBlocks)
 
   const lifeCI = sumCI(blocks)
-  const lifetimeHours = completed.reduce((a, s) => a + (s.durationMinutes ?? 0), 0) / 60
+  const lifetimeHours = sessions.reduce((a, s) => a + creditedDurationMinutes(s, settings, now), 0) / 60
 
   const mockTests = tests
     .filter((t) => isMockType(t.assessmentTypeId, catalogs))
@@ -244,10 +248,10 @@ export function deriveStats(snapshot: WorkspaceSnapshot, now = new Date()): Deri
   const pending = reviews.filter((r) => r.status !== "completed")
   const overdue = pending.filter((r) => r.firstReviewAt && r.firstReviewAt.slice(0, 10) < today)
 
-  const week = period(weekStart, weekStart, weekEnd, snapshot)
-  const lastWeek = period(lastWeekStart, lastWeekStart, lastWeekEnd, snapshot)
-  const monthT = period(month, monthStart, monthEnd, snapshot)
-  const lastMonthT = period(lastMonth, lastMonthStart, lastMonthEnd, snapshot)
+  const week = period(weekStart, weekStart, weekEnd, snapshot, now)
+  const lastWeek = period(lastWeekStart, lastWeekStart, lastWeekEnd, snapshot, now)
+  const monthT = period(month, monthStart, monthEnd, snapshot, now)
+  const lastMonthT = period(lastMonth, lastMonthStart, lastMonthEnd, snapshot, now)
 
   return {
     todayHours,
@@ -296,11 +300,11 @@ function subjectHealth(
   ctx: { today: string; tz: string; settings: Settings }
 ): SubjectHealth {
   const sessions = snapshot.sessions.filter(
-    (s) => s.status === "completed" && s.subjectId === subject.id
+    (s) => s.subjectId === subject.id && (s.status === "completed" || s.status === "running")
   )
   const blocks = snapshot.blocks.filter((b) => b.subjectId === subject.id)
   const tests = snapshot.tests.filter((t) => t.subjectId === subject.id)
-  const hours = sessions.reduce((a, s) => a + (s.durationMinutes ?? 0), 0) / 60
+  const hours = sessions.reduce((a, s) => a + creditedDurationMinutes(s, ctx.settings), 0) / 60
   const questions = blocks.reduce((a, b) => a + b.total, 0)
   const correct = blocks.reduce((a, b) => a + b.correct, 0)
   const incorrect = blocks.reduce((a, b) => a + b.incorrect, 0)

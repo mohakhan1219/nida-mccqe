@@ -199,6 +199,17 @@ export function SettingsView() {
         </div>
       </SettingsFold>
 
+      <SettingsFold title="Session Safety" summary="Long-session warnings · not a study cap">
+        <p className="text-sm text-muted-foreground">
+          These are safety thresholds, not maximum study limits. If you genuinely study five hours and confirm it,
+          all five hours count.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {num("longSessionWarningHours", "Long session warning (hours)", "0.5")}
+          {num("confirmSessionHours", "Confirmation threshold (hours)", "0.5")}
+        </div>
+      </SettingsFold>
+
       <CatalogEditor kind="subject" title="Subjects" summary={`${activeOf("subject")} active`} />
       <CatalogEditor kind="source" title="Sources" summary={`${activeOf("source")} active`} />
       <CatalogEditor kind="activity" title="Activities" summary={`${activeOf("activity")} active`} />

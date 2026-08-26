@@ -74,7 +74,8 @@ type Ctx = {
     activityId: string
     topic?: string
   }) => Promise<void>
-  punchOut: () => Promise<void>
+  punchOut: (input?: { endAt?: string; notes?: string; topic?: string }) => Promise<void>
+  confirmStillStudying: () => Promise<void>
   discardRunning: () => Promise<void>
   saveManualSession: (input: {
     subjectId: string
@@ -118,7 +119,10 @@ function mergeSnapshot(raw: Partial<WorkspaceSnapshot> | null): WorkspaceSnapsho
     catalogs: raw.catalogs?.length ? raw.catalogs : DEFAULT_CATALOGS,
     courses: raw.courses?.length ? raw.courses : DEFAULT_COURSES,
     quotes: raw.quotes?.length ? raw.quotes : defaultQuotes(),
-    sessions: raw.sessions ?? [],
+    sessions: (raw.sessions ?? []).map((s) => ({
+      ...s,
+      confirmedThroughAt: s.confirmedThroughAt ?? null,
+    })),
     blocks: raw.blocks ?? [],
     tests: raw.tests ?? [],
     reviews: raw.reviews ?? [],
@@ -372,7 +376,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const running = runningSession(snapshot)
 
   const punchIn: Ctx["punchIn"] = async (input) => {
-    if (running) throw new Error("A session is already running. Punch out first.")
+    if (running) throw new Error("A session is already running. End it first.")
     const row: StudySession = {
       id: newId(),
       subjectId: input.subjectId,
@@ -389,6 +393,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       planned: false,
       confidence: null,
       energy: null,
+      confirmedThroughAt: null,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     }
@@ -404,16 +409,46 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const punchOut: Ctx["punchOut"] = async () => {
+  const punchOut: Ctx["punchOut"] = async (input) => {
     const current = runningSession(snapshot)
     if (!current) throw new Error("No active session")
-    const endAt = nowIso()
+    const endAt = input?.endAt ?? nowIso()
+    if (new Date(endAt) <= new Date(current.startAt)) {
+      throw new Error("End time must be after start time.")
+    }
     const updated: StudySession = {
       ...current,
       endAt,
       durationMinutes: durationMinutes(current.startAt, endAt),
       status: "completed",
-      updatedAt: endAt,
+      notes: input?.notes ?? current.notes,
+      topic: input?.topic ?? current.topic,
+      confirmedThroughAt: endAt,
+      updatedAt: nowIso(),
+    }
+    const next = {
+      ...snapshot,
+      sessions: snapshot.sessions.map((s) => (s.id === updated.id ? updated : s)),
+    }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("study_sessions")
+        .update(sessionRow(updated, snapshot.workspaceId))
+        .eq("id", updated.id)
+      if (err) throw err
+    }
+  }
+
+  const confirmStillStudying: Ctx["confirmStillStudying"] = async () => {
+    const current = runningSession(snapshot)
+    if (!current) return
+    const at = nowIso()
+    const updated: StudySession = {
+      ...current,
+      confirmedThroughAt: at,
+      updatedAt: at,
     }
     const next = {
       ...snapshot,
@@ -442,7 +477,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   const saveManualSession: Ctx["saveManualSession"] = async (input) => {
-    if (running) throw new Error("Punch out the live session before saving a manual one.")
+    if (running) throw new Error("End the live session before saving a manual one.")
     if (new Date(input.endAt) <= new Date(input.startAt)) {
       throw new Error("End time must be after start time.")
     }
@@ -462,6 +497,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       planned: false,
       confidence: null,
       energy: null,
+      confirmedThroughAt: input.endAt,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     }
@@ -505,6 +541,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         planned: false,
         confidence: null,
         energy: null,
+        confirmedThroughAt: input.endAt,
         createdAt: nowIso(),
         updatedAt: nowIso(),
       }
@@ -628,7 +665,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const updateSession: Ctx["updateSession"] = async (row) => {
     if (row.endAt && row.startAt) {
-      row = { ...row, durationMinutes: durationMinutes(row.startAt, row.endAt), updatedAt: nowIso() }
+      row = {
+        ...row,
+        durationMinutes: durationMinutes(row.startAt, row.endAt),
+        confirmedThroughAt: row.endAt,
+        updatedAt: nowIso(),
+      }
     }
     await commit({
       ...snapshot,
@@ -907,6 +949,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refresh,
     punchIn,
     punchOut,
+    confirmStillStudying,
     discardRunning,
     saveManualSession,
     saveAssessment,
@@ -968,6 +1011,7 @@ function mapSession(row: Record<string, unknown>): StudySession {
     planned: Boolean(row.planned),
     confidence: row.confidence == null ? null : Number(row.confidence),
     energy: row.energy == null ? null : Number(row.energy),
+    confirmedThroughAt: row.confirmed_through_at ? String(row.confirmed_through_at) : null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   }
@@ -1096,6 +1140,7 @@ function sessionRow(row: StudySession, workspaceId: string) {
     planned: row.planned,
     confidence: row.confidence,
     energy: row.energy,
+    confirmed_through_at: row.confirmedThroughAt,
     created_at: row.createdAt,
     updated_at: row.updatedAt,
   }
