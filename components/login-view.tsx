@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { FieldLabel } from "@/components/field"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { createClient } from "@/lib/supabase/browser"
+import { NidaAvatar } from "@/components/nida-portrait"
 
 export function LoginView() {
   const router = useRouter()
@@ -40,9 +41,14 @@ export function LoginView() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
-      <p className="font-heading text-3xl">Dr. Nida's MCCQE1 Journey</p>
-      <p className="mt-2 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
+    <div className="page-shell mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
+      <div className="mb-2 flex items-center gap-3">
+        <NidaAvatar size={56} />
+        <div>
+          <p className="font-heading text-3xl leading-tight">Dr. Nida's MCCQE1 Journey</p>
+          <p className="mt-1 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
+        </div>
+      </div>
       <p className="mt-6 text-sm text-muted-foreground">
         Private household login. There is no public sign-up.
       </p>

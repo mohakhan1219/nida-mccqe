@@ -48,7 +48,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${sans.variable} ${heading.variable} h-full light`}
     >
-      <body className="min-h-full bg-background text-foreground">
+      <body className="min-h-full text-foreground">
+        <div className="page-motif" aria-hidden />
         <TooltipProvider>
           <WorkspaceProvider>
             <AppShell>{children}</AppShell>

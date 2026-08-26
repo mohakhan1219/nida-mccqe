@@ -13,6 +13,7 @@ import { newId } from "@/lib/format"
 import { nowIso, todayKey } from "@/lib/dates"
 import { reviewCycle } from "@/lib/display"
 import type { IncorrectReview } from "@/lib/types"
+import { PageTitle } from "@/components/page-title"
 
 export function ReviewView() {
   const { snapshot } = useWorkspace()
@@ -33,10 +34,9 @@ export function ReviewView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-3xl">Review</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Weakness recovery · 1 / 7 / 21 day cycles</p>
-      </div>
+      <PageTitle kicker="Weakness recovery" title="Review">
+        1 / 7 / 21 day cycles
+      </PageTitle>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi label="Due today" value={dueToday.length} />
@@ -66,7 +66,7 @@ export function ReviewView() {
       </ul>
       {done.length ? (
         <div>
-          <p className="mb-2 text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Completed</p>
+          <p className="kicker mb-2">Completed</p>
           <ul className="space-y-2 opacity-80">
             {done.map((r) => (
               <ReviewCard key={r.id} row={r} />
@@ -85,7 +85,7 @@ function nextDate(row: IncorrectReview) {
 function Kpi({ label, value, alert }: { label: string; value: number; alert?: boolean }) {
   return (
     <div className="soft-card px-3 py-3">
-      <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{label}</p>
+      <p className="kicker text-muted-foreground">{label}</p>
       <p className={`mt-1 font-heading text-2xl tabular ${alert ? "text-destructive" : ""}`}>{value}</p>
     </div>
   )

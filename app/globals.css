@@ -49,30 +49,30 @@
 }
 
 :root {
-  --background: oklch(0.975 0.008 85);
-  --foreground: oklch(0.24 0.02 50);
-  --card: oklch(0.995 0.004 85);
-  --card-foreground: oklch(0.24 0.02 50);
-  --popover: oklch(0.995 0.004 85);
-  --popover-foreground: oklch(0.24 0.02 50);
-  --primary: oklch(0.42 0.1 305);
+  --background: oklch(0.972 0.012 82);
+  --foreground: oklch(0.26 0.025 48);
+  --card: oklch(0.993 0.006 85);
+  --card-foreground: oklch(0.26 0.025 48);
+  --popover: oklch(0.993 0.006 85);
+  --popover-foreground: oklch(0.26 0.025 48);
+  --primary: oklch(0.4 0.09 305);
   --primary-foreground: oklch(0.985 0.01 300);
-  --secondary: oklch(0.95 0.01 85);
+  --secondary: oklch(0.945 0.014 82);
   --secondary-foreground: oklch(0.3 0.03 50);
-  --muted: oklch(0.955 0.01 85);
-  --muted-foreground: oklch(0.5 0.02 50);
-  --accent: oklch(0.94 0.025 305);
-  --accent-foreground: oklch(0.35 0.08 305);
+  --muted: oklch(0.95 0.012 82);
+  --muted-foreground: oklch(0.48 0.025 50);
+  --accent: oklch(0.945 0.02 90);
+  --accent-foreground: oklch(0.34 0.06 305);
   --destructive: oklch(0.5 0.16 25);
-  --border: oklch(0.9 0.012 80);
-  --input: oklch(0.9 0.012 80);
-  --ring: oklch(0.5 0.08 305);
-  --chart-1: oklch(0.5 0.1 305);
-  --chart-2: oklch(0.6 0.06 80);
+  --border: oklch(0.88 0.016 78);
+  --input: oklch(0.88 0.016 78);
+  --ring: oklch(0.5 0.07 305);
+  --chart-1: oklch(0.48 0.09 305);
+  --chart-2: oklch(0.58 0.05 80);
   --chart-3: oklch(0.45 0.04 50);
   --chart-4: oklch(0.7 0.04 85);
   --chart-5: oklch(0.35 0.05 305);
-  --radius: 0.85rem;
+  --radius: 0.9rem;
   --sidebar: oklch(0.985 0.006 85);
   --sidebar-foreground: oklch(0.24 0.02 50);
   --sidebar-primary: oklch(0.42 0.1 305);
@@ -92,12 +92,19 @@
     color-scheme: light;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    background-color: var(--background);
+    background-image:
+      radial-gradient(1100px 520px at 100% -8%, color-mix(in oklch, var(--primary) 7%, transparent), transparent 58%),
+      radial-gradient(820px 420px at -8% 12%, oklch(0.96 0.03 80 / 0.7), transparent 55%),
+      linear-gradient(180deg, oklch(0.982 0.01 85) 0%, oklch(0.968 0.014 80) 48%, oklch(0.96 0.016 78) 100%);
+    background-attachment: fixed;
   }
   h1,
   h2,
   .font-heading {
     font-family: var(--font-heading), ui-serif, Georgia, serif;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -105,16 +112,46 @@
   font-variant-numeric: tabular-nums;
 }
 
+.kicker {
+  @apply text-[11px] font-medium tracking-[0.18em] text-primary/75 uppercase;
+}
+
+.page-motif {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.055;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 140' fill='none'><path d='M0 78 H92 l18-36 16 72 18-58 14 22 H720' stroke='%235c4a8a' stroke-width='1.4' stroke-linejoin='round'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='%235c4a8a'><path d='M32 4c1.8 7 6 12 12 14-6 2-10 7-12 14-2-7-6-12-12-14 6-2 10-7 12-14zm0 28c8 2 14 8 16 16-8-2-14-8-16-16-8 2-14 8-16 16 2-8 8-14 16-16z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 6% top 9%, left 5% bottom 7%;
+  background-size: min(52vw, 560px) auto, 72px 72px;
+}
+
+.page-shell {
+  position: relative;
+  z-index: 1;
+}
+
 .soft-card {
-  @apply rounded-2xl bg-card ring-1 ring-foreground/8 shadow-[0_1px_2px_rgba(40,30,20,0.04),0_10px_28px_rgba(40,30,20,0.05)];
+  @apply rounded-2xl bg-card/95 ring-1 ring-foreground/10 shadow-[0_1px_2px_rgba(50,36,20,0.05),0_12px_32px_rgba(50,36,20,0.06)];
 }
 
 .hero-card {
-  @apply rounded-[1.4rem] bg-card ring-1 ring-foreground/8 shadow-[0_1px_2px_rgba(40,30,20,0.04),0_16px_40px_rgba(40,30,20,0.06)];
+  background:
+    linear-gradient(145deg, oklch(0.996 0.006 85) 0%, oklch(0.986 0.012 82) 62%, color-mix(in oklch, var(--primary) 6%, oklch(0.98 0.014 80)) 100%);
+  @apply rounded-[1.55rem] ring-1 ring-foreground/10 shadow-[0_1px_2px_rgba(50,36,20,0.05),0_18px_44px_rgba(50,36,20,0.08)];
 }
 
 .live-card {
-  @apply rounded-[1.4rem] bg-[color-mix(in_oklch,var(--accent)_55%,var(--card))] ring-1 ring-primary/15 shadow-[0_8px_32px_rgba(70,40,90,0.08)];
+  @apply rounded-[1.55rem] bg-[color-mix(in_oklch,var(--accent)_45%,var(--card))] ring-1 ring-primary/18 shadow-[0_8px_32px_rgba(70,40,90,0.08)];
+}
+
+.nida-hero-photo {
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, #000 9%, #000 100%);
+  mask-image: linear-gradient(to top, transparent 0%, #000 9%, #000 100%);
 }
 
 .ops-shell {

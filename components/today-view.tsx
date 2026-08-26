@@ -13,6 +13,8 @@ import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
 import { catalogName } from "@/lib/stats"
 import { quoteContext, selectDailyQuote } from "@/lib/quote-context"
 import { evidenceBandLabel, goalCountCopy, goalHoursCopy, overallStageLabel, showReadinessPercent, warmCopy } from "@/lib/display"
+import { Clock, HeartPulse, ListChecks, Percent } from "lucide-react"
+import { NidaPortrait } from "@/components/nida-portrait"
 
 function isoFromLocal(v: string) {
   return new Date(v).toISOString()
@@ -200,16 +202,27 @@ export function TodayView() {
 
   return (
     <div className="space-y-5 pb-4">
-      <section className="soft-card px-5 py-5 md:px-6">
-        <p className="text-[11px] tracking-[0.16em] text-primary/80 uppercase">Today</p>
-        <h1 className="font-heading mt-1 text-2xl leading-snug md:text-[1.85rem]">{nextAction}</h1>
-        {quote ? <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">{quote.message}</p> : null}
+      <section className="hero-card overflow-hidden">
+        <div className="grid items-end md:grid-cols-[minmax(0,1.15fr)_minmax(200px,300px)] lg:grid-cols-[minmax(0,1.2fr)_minmax(240px,340px)]">
+          <div className="relative z-10 p-6 pb-2 md:p-8 md:pr-4 md:pb-8">
+            <p className="kicker">Welcome back, {snapshot.settings.studentName}</p>
+            <h1 className="font-heading mt-2 max-w-xl text-[1.85rem] leading-snug md:text-[2.15rem]">
+              Your journey to becoming a Canadian physician starts with today.
+            </h1>
+            <p className="mt-4 max-w-lg text-sm leading-relaxed md:text-[15px]">{nextAction}</p>
+            {quote ? <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">{quote.message}</p> : null}
+          </div>
+          <NidaPortrait
+            priority
+            className="mx-auto h-[230px] w-[min(100%,280px)] md:mx-0 md:h-[300px] md:w-full lg:h-[340px]"
+          />
+        </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Mini label="Study time" value={cnHours(stats.todayHours * 60)} />
-        <Mini label="Questions" value={String(stats.todayQuestions || "—")} />
-        <Mini label="Accuracy" value={formatPercent(stats.todayAccuracy)} />
+      <section className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <Mini label="Study time" value={cnHours(stats.todayHours * 60)} icon={Clock} />
+        <Mini label="Questions" value={String(stats.todayQuestions || "—")} icon={ListChecks} />
+        <Mini label="Accuracy" value={formatPercent(stats.todayAccuracy)} icon={Percent} />
         <Mini
           label="Readiness"
           value={showReadinessPercent(readiness) ? overallStageLabel(readiness.state, readiness.examDate) : "Building Baseline"}
@@ -218,6 +231,7 @@ export function TodayView() {
               ? `${readiness.score} · ${evidenceBandLabel(readiness.confidence)}`
               : `Evidence ${evidenceBandLabel(readiness.confidence)}`
           }
+          icon={HeartPulse}
         />
       </section>
 
@@ -248,7 +262,7 @@ export function TodayView() {
       ) : (
         <section className="soft-card p-5 md:p-6">
           <div className="mb-4">
-            <h2 className="font-heading text-xl">Study</h2>
+            <h2 className="font-heading text-xl tracking-tight">Study</h2>
             <p className="text-sm text-muted-foreground">Subject, source, activity. Punch in.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -318,7 +332,7 @@ export function TodayView() {
       <section className="soft-card p-5 md:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-heading text-xl">Questions</h2>
+            <h2 className="font-heading text-xl tracking-tight">Questions</h2>
             <p className="text-sm text-muted-foreground">Only if you practised questions or sat a test.</p>
           </div>
           <Button variant="outline" className="h-10" onClick={() => setShowQuestions((v) => !v)}>
@@ -441,11 +455,24 @@ export function TodayView() {
   )
 }
 
-function Mini({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Mini({
+  label,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  label: string
+  value: string
+  hint?: string
+  icon: typeof Clock
+}) {
   return (
-    <div className="soft-card px-4 py-4">
-      <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{label}</p>
-      <p className="mt-1 font-heading text-2xl tabular">{value}</p>
+    <div className="soft-card px-3.5 py-3 md:px-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="kicker text-[10px] tracking-[0.14em] text-muted-foreground">{label}</p>
+        <Icon className="size-3.5 text-primary/55" aria-hidden />
+      </div>
+      <p className="mt-1 font-heading text-xl tabular leading-tight md:text-[1.35rem]">{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   )

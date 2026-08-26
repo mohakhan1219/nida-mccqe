@@ -11,6 +11,7 @@ import { catalogName } from "@/lib/stats"
 import { cnHours, formatPercent } from "@/lib/format"
 import { accuracyOf, scoreOf } from "@/lib/metrics"
 import type { QuestionBlock, StudySession, TestMock } from "@/lib/types"
+import { PageTitle } from "@/components/page-title"
 
 export function HistoryView() {
   const { snapshot } = useWorkspace()
@@ -32,10 +33,9 @@ export function HistoryView() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-heading text-3xl">History</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Correct a mistake and Journey updates immediately.</p>
-      </div>
+      <PageTitle kicker="The record" title="History">
+        Correct a mistake and Journey updates immediately.
+      </PageTitle>
       <div className="flex gap-2">
         {(["sessions", "blocks", "tests"] as const).map((t) => (
           <Button key={t} variant={tab === t ? "default" : "outline"} onClick={() => setTab(t)}>

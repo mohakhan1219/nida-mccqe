@@ -22,6 +22,7 @@ import { accuracySeries, currentWeekKeys, dailyQuestions, dailyStudyHours, mockS
 import { GoalMeter } from "@/components/goal-meter"
 import { AccuracyLineChart, HoursByDayChart, MockLineChart, QuestionsByDayChart, SubjectBars } from "@/components/mini-charts"
 import { Progress } from "@/components/ui/progress"
+import { NidaPortrait } from "@/components/nida-portrait"
 
 export function JourneyView() {
   const { snapshot, stats, readiness, loading } = useWorkspace()
@@ -68,23 +69,42 @@ export function JourneyView() {
   const currentName = stats.todaySubjectId ? catalogName(snapshot, stats.todaySubjectId) : null
 
   return (
-    <div className="space-y-8 pb-8">
-      <section>
+    <div className="space-y-7 pb-8">
+      {quote ? (
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Good {greeting()}, {snapshot.settings.studentName}. {quote.message}
+        </p>
+      ) : (
         <p className="text-sm text-muted-foreground">
           Good {greeting()}, {snapshot.settings.studentName}.
         </p>
-        {quote ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{quote.message}</p> : null}
-      </section>
+      )}
 
-      <section className="hero-card p-6 md:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div className="max-w-2xl">
-            <p className="text-[11px] tracking-[0.16em] text-primary/80 uppercase">Exam readiness</p>
-            <h1 className="font-heading mt-2 text-3xl md:text-4xl">
+      <section className="hero-card overflow-hidden">
+        <div className="grid items-end md:grid-cols-[minmax(0,1.2fr)_minmax(200px,300px)] lg:grid-cols-[minmax(0,1.25fr)_minmax(240px,340px)]">
+          <div className="relative z-10 p-6 pb-2 md:p-8 md:pr-4 md:pb-8">
+            <p className="kicker">Exam readiness</p>
+            <h1 className="font-heading mt-2 text-3xl leading-tight md:text-4xl">
               {showScore ? stage : "Building Your Baseline"}
             </h1>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{warmCopy(readiness.why)}</p>
-            <p className="mt-2 text-sm">{warmCopy(readiness.nextFocus)}</p>
+            {showScore ? (
+              <p className="mt-3 font-heading text-5xl tabular text-primary">{readiness.score}</p>
+            ) : (
+              <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                A percentage will appear once the record is strong enough.
+              </p>
+            )}
+            <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">{warmCopy(readiness.why)}</p>
+            <p className="mt-2 max-w-lg text-sm">{warmCopy(readiness.nextFocus)}</p>
+            <p className="mt-4 text-xs tracking-wide text-muted-foreground uppercase">
+              Evidence confidence · {evidenceBandLabel(readiness.confidence)}
+            </p>
+            {readiness.examDate ? (
+              <p className="mt-2 text-sm">
+                Exam countdown — {readiness.countdown} days
+                {track ? ` · ${track}` : ""}
+              </p>
+            ) : null}
             {!readiness.examDate && readiness.state === "ready_to_book" ? (
               <p className="mt-3 text-sm">You appear ready to book MCCQE1. Set the date in Settings when you have it.</p>
             ) : null}
@@ -92,25 +112,7 @@ export function JourneyView() {
               <p className="mt-3 text-sm text-muted-foreground">No exam date booked. Readiness will tell you when booking looks justified.</p>
             ) : null}
           </div>
-          <div className="min-w-[10rem] text-right">
-            {showScore ? (
-              <>
-                <p className="font-heading text-6xl tabular text-primary">{readiness.score}</p>
-                <p className="mt-1 text-xs tracking-wide text-muted-foreground uppercase">{stage}</p>
-              </>
-            ) : (
-              <p className="font-heading text-2xl leading-snug">A percentage will appear once the record is strong enough.</p>
-            )}
-            <p className="mt-3 text-xs tracking-wide text-muted-foreground uppercase">
-              Evidence confidence · {evidenceBandLabel(readiness.confidence)}
-            </p>
-            {readiness.examDate ? (
-              <p className="mt-3 text-sm">
-                Exam countdown — {readiness.countdown} days
-                {track ? ` · ${track}` : ""}
-              </p>
-            ) : null}
-          </div>
+          <NidaPortrait className="mx-auto h-[230px] w-[min(100%,280px)] md:mx-0 md:h-[320px] md:w-full lg:h-[360px]" />
         </div>
       </section>
 
@@ -123,7 +125,7 @@ export function JourneyView() {
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="soft-card p-5">
-          <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">This week</p>
+          <p className="kicker">This week</p>
           <div className="mt-4 space-y-4">
             <GoalMeter
               label="Weekly study goal"
@@ -144,7 +146,7 @@ export function JourneyView() {
           </div>
         </div>
         <div className="soft-card p-5">
-          <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Recent trend</p>
+          <p className="kicker">Recent trend</p>
           <p className="mt-2 text-sm text-muted-foreground">
             {stats.trend === "up"
               ? "Accuracy is improving."
@@ -162,11 +164,11 @@ export function JourneyView() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="soft-card p-5">
-          <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Weekly study activity</p>
+          <p className="kicker">Weekly study activity</p>
           <HoursByDayChart data={hourDays} />
         </div>
         <div className="soft-card p-5">
-          <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Weekly question volume</p>
+          <p className="kicker">Weekly question volume</p>
           <QuestionsByDayChart data={qDays} />
         </div>
       </section>
@@ -179,7 +181,7 @@ export function JourneyView() {
       </section>
 
       <section className="soft-card p-5">
-        <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Subject health</p>
+        <p className="kicker">Subject health</p>
         <p className="mt-1 mb-4 text-sm text-muted-foreground">
           0–100 composite of accuracy, recency, tests, and review for each subject — not exam readiness and not accuracy alone. Active subjects, up to eight.
         </p>
@@ -188,7 +190,7 @@ export function JourneyView() {
 
       {upcoming.length ? (
         <section className="soft-card p-5">
-          <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Upcoming schedule</p>
+          <p className="kicker">Upcoming schedule</p>
           <ul className="mt-3 space-y-2 text-sm">
             {upcoming.map((row) => (
               <li key={row.id} className="flex justify-between gap-3">
@@ -210,7 +212,7 @@ export function JourneyView() {
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-foreground/8 [&::-webkit-details-marker]:hidden">
           <div>
-            <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">All subjects</p>
+            <p className="kicker">All subjects</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {active.length} with study · {untouched.length} not started · full catalog
             </p>
@@ -236,7 +238,7 @@ export function JourneyView() {
 
       <div className="space-y-6 border-t border-border/70 pt-8">
         <section className="soft-card p-5">
-          <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Mock performance</p>
+          <p className="kicker">Mock performance</p>
           {mocks.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Complete your first mock exam to unlock mock readiness.</p>
           ) : (
@@ -246,7 +248,7 @@ export function JourneyView() {
           )}
         </section>
         <section className="soft-card p-5">
-          <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Question banks & courses</p>
+          <p className="kicker">Question banks & courses</p>
           <ul className="mt-3 space-y-3">
             {snapshot.courses.map((c) => {
               const unitTarget = c.totalUnits && c.totalUnits > 0
@@ -274,12 +276,12 @@ export function JourneyView() {
         </section>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="soft-card p-5">
-            <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Monthly hours</p>
+            <p className="kicker">Monthly hours</p>
             <p className="mt-1 font-heading text-2xl tabular">{stats.month.hours.toFixed(1)}h</p>
             <p className="text-xs text-muted-foreground">{stats.month.activeDays} active days</p>
           </div>
           <div className="soft-card p-5">
-            <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">Achievements</p>
+            <p className="kicker">Achievements</p>
             <ul className="mt-2 space-y-1 text-sm">
               {stats.achievements.map((a) => (
                 <li key={a.id} className={a.unlocked ? "text-foreground" : "text-muted-foreground"}>
@@ -306,8 +308,8 @@ function Stat({
   emptyText?: string
 }) {
   return (
-    <div className="soft-card px-4 py-4">
-      <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{label}</p>
+    <div className="soft-card px-4 py-3.5">
+      <p className="kicker text-muted-foreground">{label}</p>
       {empty ? (
         <p className="mt-2 text-sm text-muted-foreground">{emptyText}</p>
       ) : (
@@ -330,7 +332,7 @@ function Band({
 }) {
   return (
     <div className="soft-card p-5">
-      <p className="text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{title}</p>
+      <p className="kicker">{title}</p>
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{empty}</p>
       ) : (

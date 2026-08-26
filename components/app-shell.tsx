@@ -8,6 +8,7 @@ import { useWorkspace } from "@/lib/data/workspace-context"
 import { formatDurationClock } from "@/lib/format"
 import { catalogName } from "@/lib/stats"
 import { useEffect, useState } from "react"
+import { NidaAvatar } from "@/components/nida-portrait"
 
 const NAV = [
   { href: "/", label: "Today", icon: Sun },
@@ -26,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-dvh flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10",
+        "page-shell mx-auto flex min-h-dvh flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10",
         ops ? "max-w-7xl" : "max-w-6xl"
       )}
     >
@@ -87,13 +88,16 @@ function Header() {
   return (
     <header className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-heading text-[1.55rem] leading-none tracking-tight text-foreground md:text-3xl">
-            👩‍⚕️ Dr. Nida's MCCQE1 Journey
-          </p>
-          <p className="mt-1.5 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
+        <div className="flex min-w-0 items-center gap-3 md:gap-3.5">
+          <NidaAvatar size={52} />
+          <div className="min-w-0">
+            <p className="font-heading text-[1.7rem] leading-[1.08] tracking-tight text-foreground sm:text-[1.85rem] md:text-[2.2rem]">
+              Dr. Nida's MCCQE1 Journey
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
+          </div>
         </div>
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-0.5 pt-1 md:flex">
           {NAV.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
             return (

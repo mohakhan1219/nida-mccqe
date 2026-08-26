@@ -13,6 +13,7 @@ import { newId } from "@/lib/format"
 import { catalogByKind } from "@/lib/catalogs"
 import { todayKey } from "@/lib/dates"
 import { humanizeSettingKey } from "@/lib/display"
+import { PageTitle } from "@/components/page-title"
 
 export function SettingsView() {
   const {
@@ -78,12 +79,9 @@ export function SettingsView() {
 
   return (
     <div className="space-y-4 pb-8">
-      <div>
-        <h1 className="font-heading text-3xl">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Every target is editable. Nothing here is a medical constant.
-        </p>
-      </div>
+      <PageTitle kicker="Household" title="Settings">
+        Every target is editable. Nothing here is a medical constant.
+      </PageTitle>
 
       <SettingsFold title="Profile & Exam" defaultOpen>
         <div className="grid gap-3 md:grid-cols-2">
