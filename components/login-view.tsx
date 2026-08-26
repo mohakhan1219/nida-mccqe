@@ -45,7 +45,9 @@ export function LoginView() {
       <div className="mb-2 flex items-center gap-3">
         <NidaAvatar size={56} />
         <div>
-          <p className="font-heading text-3xl leading-tight">Dr. Nida's MCCQE1 Journey</p>
+          <p className="font-heading text-[1.75rem] leading-snug">
+            Dr. Nida's MCCQE1 Journey
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
         </div>
       </div>

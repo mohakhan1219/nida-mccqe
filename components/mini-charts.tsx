@@ -57,7 +57,7 @@ export function HoursByDayChart({
         <CartesianGrid vertical={false} {...GRID} />
         <XAxis dataKey="date" tickFormatter={shortDay} tick={TICK} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <Tooltip {...tooltip} formatter={(v) => [`${v}h`, "Hours"]} />
-        <Bar dataKey="hours" fill="#5c4a8a" radius={[4, 4, 0, 0]} maxBarSize={22} />
+        <Bar dataKey="hours" fill="#1f4a52" radius={[4, 4, 0, 0]} maxBarSize={22} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -75,7 +75,7 @@ export function QuestionsByDayChart({
         <CartesianGrid vertical={false} {...GRID} />
         <XAxis dataKey="date" tickFormatter={shortDay} tick={TICK} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <Tooltip {...tooltip} formatter={(v) => [v, "Questions"]} />
-        <Bar dataKey="questions" fill="#7a679e" radius={[4, 4, 0, 0]} maxBarSize={22} />
+        <Bar dataKey="questions" fill="#3d6b73" radius={[4, 4, 0, 0]} maxBarSize={22} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -93,7 +93,7 @@ export function AccuracyLineChart({
         <CartesianGrid vertical={false} {...GRID} />
         <XAxis dataKey="date" tickFormatter={shortDay} tick={TICK} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <Tooltip {...tooltip} formatter={(v) => [`${v}%`, "Accuracy"]} />
-        <Line type="monotone" dataKey="accuracy" stroke="#5c4a8a" strokeWidth={2} dot={{ r: 3, fill: "#5c4a8a" }} />
+        <Line type="monotone" dataKey="accuracy" stroke="#1f4a52" strokeWidth={2} dot={{ r: 3, fill: "#1f4a52" }} />
       </LineChart>
     </ResponsiveContainer>
   )
@@ -112,7 +112,7 @@ export function ReadinessLineChart({
         <CartesianGrid vertical={false} {...GRID} />
         <XAxis dataKey="date" tickFormatter={shortDay} tick={TICK} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <Tooltip {...tooltip} formatter={(v) => [v, "Readiness"]} />
-        <Line type="monotone" dataKey="score" stroke="#5c4a8a" strokeWidth={2} dot={{ r: 3, fill: "#5c4a8a" }} />
+        <Line type="monotone" dataKey="score" stroke="#1f4a52" strokeWidth={2} dot={{ r: 3, fill: "#1f4a52" }} />
       </LineChart>
     </ResponsiveContainer>
   )
@@ -160,7 +160,7 @@ export function MockLineChart({
         <CartesianGrid vertical={false} {...GRID} />
         <XAxis dataKey="date" tickFormatter={shortDay} tick={TICK} axisLine={false} tickLine={false} interval="preserveStartEnd" />
         <Tooltip {...tooltip} formatter={(v) => [`${v}%`, "Score"]} />
-        <Line type="monotone" dataKey="score" stroke="#5c4a8a" strokeWidth={2} dot={{ r: 3, fill: "#5c4a8a" }} />
+        <Line type="monotone" dataKey="score" stroke="#1f4a52" strokeWidth={2} dot={{ r: 3, fill: "#1f4a52" }} />
       </LineChart>
     </ResponsiveContainer>
   )

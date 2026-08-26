@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next"
-import { Fraunces, Source_Sans_3 } from "next/font/google"
+import { Libre_Baskerville, Source_Sans_3 } from "next/font/google"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
 import { WorkspaceProvider } from "@/lib/data/workspace-context"
@@ -13,9 +13,10 @@ const sans = Source_Sans_3({
   display: "swap",
 })
 
-const heading = Fraunces({
+const heading = Libre_Baskerville({
   variable: "--font-heading",
   subsets: ["latin"],
+  weight: ["400", "700"],
   display: "swap",
 })
 
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#5c4a8a",
+  themeColor: "#1f4a52",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -49,7 +50,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${sans.variable} ${heading.variable} h-full light`}
     >
       <body className="min-h-full text-foreground">
-        <div className="page-motif" aria-hidden />
         <TooltipProvider>
           <WorkspaceProvider>
             <AppShell>{children}</AppShell>

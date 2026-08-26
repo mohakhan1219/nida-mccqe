@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, ClipboardList, LayoutDashboard, Settings2, Sun } from "lucide-react"
+import { BookOpen, ClipboardList, Home, LayoutDashboard, Settings2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/lib/data/workspace-context"
 import { formatDurationClock } from "@/lib/format"
@@ -11,7 +11,7 @@ import { useEffect, useState } from "react"
 import { NidaAvatar } from "@/components/nida-portrait"
 
 const NAV = [
-  { href: "/", label: "Today", icon: Sun },
+  { href: "/", label: "Today", icon: Home },
   { href: "/journey", label: "Journey", icon: LayoutDashboard },
   { href: "/review", label: "Review", icon: BookOpen },
   { href: "/history", label: "History", icon: ClipboardList },
@@ -25,37 +25,41 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const ops = pathname.startsWith("/ops")
 
   return (
-    <div
-      className={cn(
-        "page-shell mx-auto flex min-h-dvh flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10",
-        ops ? "max-w-7xl" : "max-w-6xl"
-      )}
-    >
-      <Header />
-      <LoadError />
-      <main className="flex-1 pt-6">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-6xl justify-around px-2 py-2">
-          {NAV.map((item) => {
-            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-1 text-[11px]",
-                  active ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                <Icon className="size-4" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
-    </div>
+    <>
+      {pathname === "/" ? <div className="page-backdrop page-backdrop-today" aria-hidden /> : null}
+      {pathname.startsWith("/journey") ? <div className="page-backdrop page-backdrop-journey" aria-hidden /> : null}
+      <div
+        className={cn(
+          "page-shell mx-auto flex min-h-dvh flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10",
+          ops ? "max-w-7xl" : "max-w-6xl"
+        )}
+      >
+        <Header />
+        <LoadError />
+        <main className="flex-1 pt-6">{children}</main>
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 backdrop-blur md:hidden">
+          <div className="mx-auto flex max-w-6xl justify-around px-2 py-2">
+            {NAV.map((item) => {
+              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex min-w-[3.25rem] flex-col items-center gap-0.5 px-2 py-1 text-[11px]",
+                    active ? "text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  <Icon className="size-5 stroke-[1.75]" aria-hidden />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </div>
+        </nav>
+      </div>
+    </>
   )
 }
 
@@ -91,8 +95,12 @@ function Header() {
         <div className="flex min-w-0 items-center gap-3 md:gap-3.5">
           <NidaAvatar size={52} />
           <div className="min-w-0">
-            <p className="font-heading text-[1.7rem] leading-[1.08] tracking-tight text-foreground sm:text-[1.85rem] md:text-[2.2rem]">
-              Dr. Nida's MCCQE1 Journey
+            <p className="font-heading text-[1.55rem] leading-[1.2] text-foreground sm:text-[1.8rem] md:text-[2.15rem]">
+              <span className="block sm:inline">Dr. Nida's MCCQE1</span>
+              <span className="block sm:ml-0 sm:inline">
+                <span className="hidden sm:inline"> </span>
+                Journey
+              </span>
             </p>
             <p className="mt-1 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
           </div>

@@ -112,7 +112,10 @@ export function JourneyView() {
               <p className="mt-3 text-sm text-muted-foreground">No exam date booked. Readiness will tell you when booking looks justified.</p>
             ) : null}
           </div>
-          <NidaPortrait className="mx-auto h-[230px] w-[min(100%,280px)] md:mx-0 md:h-[320px] md:w-full lg:h-[360px]" />
+          <NidaPortrait
+            priority
+            className="mx-auto h-[230px] w-[min(100%,280px)] md:mx-0 md:h-[320px] md:w-full lg:h-[360px]"
+          />
         </div>
       </section>
 
