@@ -122,49 +122,60 @@
   inset: 0;
   z-index: 0;
   overflow: hidden;
+  --frame-inset: clamp(12px, 1.2vw, 22px);
+  --frame-width: min(28vw, max(0px, calc((100vw - 72rem) / 2 + 96px)), 380px);
 }
 
 .bd-img {
   position: absolute;
   max-width: none;
   height: auto;
+  max-height: 68vh;
+  object-fit: contain;
   user-select: none;
 }
 
 .page-backdrop-today .bd-anatomy {
-  top: 2%;
-  left: -1%;
-  width: min(26vw, 320px);
-  opacity: 0.58;
+  top: 4.75rem;
+  left: var(--frame-inset);
+  width: min(18vw, 240px);
+  max-height: 32vh;
+  object-position: left top;
+  opacity: 0.5;
 }
 
 .page-backdrop-today .bd-shelf {
-  top: -3%;
-  right: -3%;
-  width: min(32vw, 420px);
-  opacity: 0.62;
+  top: 4.5rem;
+  right: var(--frame-inset);
+  width: min(22vw, 280px);
+  max-height: 28vh;
+  object-position: right top;
+  opacity: 0.55;
 }
 
 .page-backdrop-today .bd-left {
-  bottom: -5%;
-  left: -5%;
-  width: min(34vw, 460px);
-  opacity: 0.82;
+  bottom: var(--frame-inset);
+  left: var(--frame-inset);
+  width: var(--frame-width);
+  object-position: left bottom;
+  opacity: 0.84;
 }
 
 .page-backdrop-today .bd-right {
-  bottom: -4%;
-  right: -6%;
-  width: min(34vw, 470px);
-  opacity: 0.8;
+  bottom: var(--frame-inset);
+  right: var(--frame-inset);
+  width: var(--frame-width);
+  object-position: right bottom;
+  opacity: 0.82;
 }
 
 .page-backdrop-today .bd-ecg {
-  left: 3%;
-  bottom: 7%;
-  width: min(42vw, 500px);
+  left: calc(var(--frame-inset) + 8px);
+  bottom: 28%;
+  width: min(28vw, 320px);
+  max-height: none;
   color: var(--primary);
-  opacity: 0.2;
+  opacity: 0.18;
 }
 
 .page-backdrop-today .bd-wash {
@@ -180,17 +191,20 @@
 }
 
 .page-backdrop-journey .bd-anatomy {
-  top: 8%;
-  left: -4%;
-  width: min(20vw, 240px);
-  opacity: 0.32;
+  top: 5.5rem;
+  left: var(--frame-inset);
+  width: min(16vw, 200px);
+  max-height: 28vh;
+  object-position: left top;
+  opacity: 0.28;
 }
 
 .page-backdrop-journey .bd-left {
-  bottom: -8%;
-  left: -10%;
-  width: min(24vw, 280px);
-  opacity: 0.34;
+  bottom: var(--frame-inset);
+  left: var(--frame-inset);
+  width: min(18vw, 240px);
+  object-position: left bottom;
+  opacity: 0.3;
 }
 
 .page-backdrop-journey .bd-ecg,
@@ -215,23 +229,31 @@
   }
 }
 
-@media (min-width: 768px) and (max-width: 1100px) {
+@media (min-width: 768px) and (max-width: 1279px) {
   .page-backdrop-today .bd-left,
-  .page-backdrop-today .bd-right {
-    width: min(24vw, 280px);
-    opacity: 0.45;
+  .page-backdrop-today .bd-right,
+  .page-backdrop-today .bd-ecg,
+  .page-backdrop-journey .bd-left {
+    display: none;
   }
   .page-backdrop-today .bd-anatomy,
-  .page-backdrop-today .bd-shelf {
-    width: min(20vw, 230px);
-    opacity: 0.34;
-  }
-  .page-backdrop-today .bd-ecg {
-    opacity: 0.12;
-  }
-  .page-backdrop-journey .bd-left,
   .page-backdrop-journey .bd-anatomy {
-    opacity: 0.18;
+    top: 5rem;
+    left: 12px;
+    width: min(150px, 16vw);
+    opacity: 0.32;
+  }
+  .page-backdrop-today .bd-shelf {
+    top: 4.75rem;
+    right: 12px;
+    width: min(170px, 18vw);
+    opacity: 0.3;
+  }
+}
+
+@media (min-width: 1600px) {
+  .page-backdrop-today {
+    --frame-width: min(32vw, calc((100vw - 72rem) / 2 + 120px), 420px);
   }
 }
 
