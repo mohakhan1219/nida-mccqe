@@ -136,22 +136,32 @@
   user-select: none;
 }
 
+.page-backdrop-today .bd-anatomy,
+.page-backdrop-journey .bd-anatomy {
+  mix-blend-mode: multiply;
+}
+
 .page-backdrop-today .bd-anatomy {
-  top: 5.25rem;
+  top: 4.6rem;
   left: var(--frame-inset);
-  width: min(16vw, 220px);
-  max-height: 30vh;
+  width: min(22vw, 280px);
+  max-height: 52vh;
   object-position: left top;
-  opacity: 0.5;
+  opacity: 0.58;
+  -webkit-mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
+  mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
 }
 
 .page-backdrop-today .bd-shelf {
-  top: 5rem;
+  top: 4.4rem;
   right: var(--frame-inset);
-  width: min(18vw, 240px);
-  max-height: 26vh;
+  width: min(24vw, 300px);
+  max-height: 46vh;
   object-position: right top;
-  opacity: 0.52;
+  opacity: 0.72;
+  mix-blend-mode: multiply;
+  -webkit-mask-image: radial-gradient(ellipse 105% 90% at 96% 6%, #000 0%, #000 36%, transparent 74%);
+  mask-image: radial-gradient(ellipse 105% 90% at 96% 6%, #000 0%, #000 36%, transparent 74%);
 }
 
 .page-backdrop-today .bd-left {
@@ -194,10 +204,12 @@
 .page-backdrop-journey .bd-anatomy {
   top: 5.5rem;
   left: var(--frame-inset);
-  width: min(16vw, 200px);
-  max-height: 28vh;
+  width: min(18vw, 220px);
+  max-height: 42vh;
   object-position: left top;
-  opacity: 0.28;
+  opacity: 0.32;
+  -webkit-mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
+  mask-image: radial-gradient(ellipse 110% 95% at 6% 8%, #000 0%, #000 34%, transparent 72%);
 }
 
 .page-backdrop-journey .bd-left {
@@ -242,13 +254,15 @@
     top: 5rem;
     left: 12px;
     width: min(150px, 16vw);
+    max-height: 28vh;
     opacity: 0.32;
   }
   .page-backdrop-today .bd-shelf {
     top: 4.75rem;
     right: 12px;
     width: min(170px, 18vw);
-    opacity: 0.3;
+    max-height: 24vh;
+    opacity: 0.34;
   }
 }
 
