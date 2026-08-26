@@ -90,6 +90,7 @@
   html {
     @apply font-sans;
     color-scheme: light;
+    overflow-x: clip;
   }
   body {
     @apply text-foreground antialiased;
@@ -252,8 +253,11 @@
 }
 
 @media (min-width: 1600px) {
+  .page-backdrop {
+    --frame-inset: clamp(22px, 1.8vw, 36px);
+  }
   .page-backdrop-today {
-    --frame-width: min(32vw, calc((100vw - 72rem) / 2 + 120px), 420px);
+    --frame-width: min(30vw, calc((100vw - 72rem) / 2 + 80px), 400px);
   }
 }
 
