@@ -49,38 +49,38 @@
 }
 
 :root {
-  --background: oklch(0.97 0.012 85);
-  --foreground: oklch(0.27 0.03 210);
+  --background: oklch(0.968 0.012 82);
+  --foreground: oklch(0.24 0.03 300);
   --card: oklch(0.995 0.004 90);
-  --card-foreground: oklch(0.27 0.03 210);
+  --card-foreground: oklch(0.24 0.03 300);
   --popover: oklch(0.995 0.004 90);
-  --popover-foreground: oklch(0.27 0.03 210);
-  --primary: oklch(0.37 0.055 210);
-  --primary-foreground: oklch(0.98 0.01 90);
-  --secondary: oklch(0.94 0.016 85);
-  --secondary-foreground: oklch(0.3 0.03 210);
+  --popover-foreground: oklch(0.24 0.03 300);
+  --primary: oklch(0.39 0.07 318);
+  --primary-foreground: oklch(0.985 0.01 90);
+  --secondary: oklch(0.945 0.014 85);
+  --secondary-foreground: oklch(0.28 0.03 300);
   --muted: oklch(0.945 0.012 85);
-  --muted-foreground: oklch(0.48 0.025 210);
-  --accent: oklch(0.94 0.02 200);
-  --accent-foreground: oklch(0.32 0.05 210);
+  --muted-foreground: oklch(0.48 0.03 300);
+  --accent: oklch(0.945 0.022 320);
+  --accent-foreground: oklch(0.32 0.05 318);
   --destructive: oklch(0.5 0.16 25);
   --border: oklch(0.88 0.016 85);
   --input: oklch(0.88 0.016 85);
-  --ring: oklch(0.45 0.05 210);
-  --chart-1: oklch(0.4 0.06 210);
-  --chart-2: oklch(0.55 0.04 85);
-  --chart-3: oklch(0.45 0.03 50);
-  --chart-4: oklch(0.7 0.03 90);
-  --chart-5: oklch(0.35 0.04 210);
-  --radius: 0.9rem;
+  --ring: oklch(0.45 0.06 318);
+  --chart-1: oklch(0.39 0.07 318);
+  --chart-2: oklch(0.52 0.05 85);
+  --chart-3: oklch(0.45 0.04 20);
+  --chart-4: oklch(0.72 0.03 90);
+  --chart-5: oklch(0.32 0.04 300);
+  --radius: 0.95rem;
   --sidebar: oklch(0.985 0.006 85);
-  --sidebar-foreground: oklch(0.27 0.03 210);
-  --sidebar-primary: oklch(0.37 0.055 210);
-  --sidebar-primary-foreground: oklch(0.98 0.01 90);
-  --sidebar-accent: oklch(0.94 0.02 200);
-  --sidebar-accent-foreground: oklch(0.32 0.05 210);
+  --sidebar-foreground: oklch(0.24 0.03 300);
+  --sidebar-primary: oklch(0.39 0.07 318);
+  --sidebar-primary-foreground: oklch(0.985 0.01 90);
+  --sidebar-accent: oklch(0.945 0.022 320);
+  --sidebar-accent-foreground: oklch(0.32 0.05 318);
   --sidebar-border: oklch(0.88 0.016 85);
-  --sidebar-ring: oklch(0.45 0.05 210);
+  --sidebar-ring: oklch(0.45 0.06 318);
 }
 
 @layer base {
@@ -95,16 +95,16 @@
     @apply text-foreground antialiased;
     background-color: var(--background);
     background-image:
-      radial-gradient(900px 480px at 100% 0%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 55%),
-      radial-gradient(720px 380px at 0% 12%, oklch(0.95 0.02 85 / 0.8), transparent 52%),
-      linear-gradient(180deg, oklch(0.985 0.01 90) 0%, oklch(0.968 0.014 85) 100%);
+      radial-gradient(880px 420px at 100% 0%, color-mix(in oklch, var(--primary) 9%, transparent), transparent 58%),
+      radial-gradient(640px 360px at 0% 100%, oklch(0.95 0.02 82 / 0.7), transparent 55%),
+      linear-gradient(180deg, oklch(0.982 0.01 88) 0%, oklch(0.962 0.014 82) 100%);
     background-attachment: fixed;
   }
   h1,
   h2,
   .font-heading {
-    font-family: var(--font-heading), ui-serif, Georgia, "Times New Roman", serif;
-    letter-spacing: -0.015em;
+    font-family: var(--font-heading), Georgia, "Times New Roman", serif;
+    letter-spacing: -0.018em;
   }
 }
 
@@ -121,84 +121,117 @@
   position: fixed;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
 }
 
-.page-backdrop-today {
-  background-image:
-    url("/backdrops/medical-top.webp"),
-    url("/backdrops/medical-left.webp"),
-    url("/backdrops/medical-right.webp"),
-    url("/backdrops/ecg.svg");
-  background-repeat: no-repeat;
-  background-position:
-    center top,
-    left -2% top 2%,
-    right -4% top 12%,
-    left 2% bottom 6%;
-  background-size:
-    100% auto,
-    min(36vw, 420px) auto,
-    min(34vw, 400px) auto,
-    min(48vw, 540px) auto;
-  opacity: 0.88;
+.bd-img {
+  position: absolute;
+  max-width: none;
+  height: auto;
+  user-select: none;
 }
 
-.page-backdrop-today::after {
-  content: "";
+.page-backdrop-today .bd-anatomy {
+  top: 2%;
+  left: -1%;
+  width: min(26vw, 320px);
+  opacity: 0.58;
+}
+
+.page-backdrop-today .bd-shelf {
+  top: -3%;
+  right: -3%;
+  width: min(32vw, 420px);
+  opacity: 0.62;
+}
+
+.page-backdrop-today .bd-left {
+  bottom: -5%;
+  left: -5%;
+  width: min(34vw, 460px);
+  opacity: 0.82;
+}
+
+.page-backdrop-today .bd-right {
+  bottom: -4%;
+  right: -6%;
+  width: min(34vw, 470px);
+  opacity: 0.8;
+}
+
+.page-backdrop-today .bd-ecg {
+  left: 3%;
+  bottom: 7%;
+  width: min(42vw, 500px);
+  color: var(--primary);
+  opacity: 0.2;
+}
+
+.page-backdrop-today .bd-wash {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 56% 64% at 50% 40%, var(--background) 18%, color-mix(in oklch, var(--background) 75%, transparent) 46%, transparent 68%);
+    radial-gradient(
+      ellipse 48% 56% at 50% 36%,
+      var(--background) 8%,
+      color-mix(in oklch, var(--background) 82%, transparent) 44%,
+      transparent 72%
+    );
 }
 
-.page-backdrop-journey {
-  background-image:
-    url("/backdrops/medical-top.webp"),
-    url("/backdrops/medical-left.webp"),
-    url("/backdrops/ecg.svg");
-  background-repeat: no-repeat;
-  background-position:
-    center top,
-    left -8% bottom -4%,
-    right 6% bottom 12%;
-  background-size:
-    100% auto,
-    min(22vw, 240px) auto,
-    min(36vw, 400px) auto;
-  opacity: 0.28;
+.page-backdrop-journey .bd-anatomy {
+  top: 8%;
+  left: -4%;
+  width: min(20vw, 240px);
+  opacity: 0.32;
 }
 
-.page-backdrop-journey::after {
-  content: "";
+.page-backdrop-journey .bd-left {
+  bottom: -8%;
+  left: -10%;
+  width: min(24vw, 280px);
+  opacity: 0.34;
+}
+
+.page-backdrop-journey .bd-ecg,
+.page-backdrop-journey .bd-shelf,
+.page-backdrop-journey .bd-right {
+  display: none;
+}
+
+.page-backdrop-journey .bd-wash {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 86% 88% at 50% 40%, var(--background) 42%, transparent 76%);
+    radial-gradient(ellipse 78% 80% at 50% 40%, var(--background) 38%, transparent 78%);
 }
 
 @media (max-width: 767px) {
-  .page-backdrop-today,
-  .page-backdrop-journey {
-    background-image: none;
-    opacity: 1;
+  .bd-img {
+    display: none;
   }
-  .page-backdrop-today::after,
-  .page-backdrop-journey::after {
+  .bd-wash {
     display: none;
   }
 }
 
 @media (min-width: 768px) and (max-width: 1100px) {
-  .page-backdrop-today {
-    opacity: 0.5;
-    background-size:
-      100% auto,
-      min(26vw, 260px) auto,
-      min(24vw, 240px) auto,
-      min(36vw, 300px) auto;
+  .page-backdrop-today .bd-left,
+  .page-backdrop-today .bd-right {
+    width: min(24vw, 280px);
+    opacity: 0.45;
   }
-  .page-backdrop-journey {
-    opacity: 0.16;
+  .page-backdrop-today .bd-anatomy,
+  .page-backdrop-today .bd-shelf {
+    width: min(20vw, 230px);
+    opacity: 0.34;
+  }
+  .page-backdrop-today .bd-ecg {
+    opacity: 0.12;
+  }
+  .page-backdrop-journey .bd-left,
+  .page-backdrop-journey .bd-anatomy {
+    opacity: 0.18;
   }
 }
 
@@ -208,17 +241,22 @@
 }
 
 .soft-card {
-  @apply rounded-2xl bg-card ring-1 ring-foreground/10 shadow-[0_1px_2px_rgba(30,40,45,0.05),0_12px_28px_rgba(30,40,45,0.06)];
+  @apply rounded-2xl bg-card ring-1 ring-foreground/10 shadow-[0_1px_2px_rgba(40,28,36,0.05),0_14px_32px_rgba(40,28,36,0.07)];
 }
 
 .hero-card {
   background:
-    linear-gradient(160deg, oklch(0.997 0.004 90) 0%, oklch(0.988 0.01 85) 70%, color-mix(in oklch, var(--primary) 7%, oklch(0.98 0.012 85)) 100%);
-  @apply rounded-[1.5rem] ring-1 ring-foreground/10 shadow-[0_1px_2px_rgba(30,40,45,0.05),0_16px_40px_rgba(30,40,45,0.08)];
+    linear-gradient(
+      118deg,
+      oklch(0.997 0.004 90) 0%,
+      oklch(0.988 0.012 90) 46%,
+      color-mix(in oklch, var(--primary) 10%, oklch(0.98 0.02 320)) 100%
+    );
+  @apply rounded-[1.5rem] ring-1 ring-foreground/10 shadow-[0_1px_2px_rgba(40,28,36,0.05),0_18px_44px_rgba(40,28,36,0.08)];
 }
 
 .live-card {
-  @apply rounded-[1.5rem] bg-[color-mix(in_oklch,var(--accent)_50%,var(--card))] ring-1 ring-primary/18 shadow-[0_8px_28px_rgba(31,74,82,0.08)];
+  @apply rounded-[1.5rem] bg-[color-mix(in_oklch,var(--accent)_55%,var(--card))] ring-1 ring-primary/18 shadow-[0_8px_28px_rgba(72,48,80,0.08)];
 }
 
 .nida-hero-photo {

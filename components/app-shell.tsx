@@ -9,6 +9,8 @@ import { formatDurationClock } from "@/lib/format"
 import { catalogName } from "@/lib/stats"
 import { useEffect, useState } from "react"
 import { NidaAvatar } from "@/components/nida-portrait"
+import { BrandSubtitle } from "@/components/canada-flag"
+import { MedicalBackdrop } from "@/components/medical-backdrop"
 
 const NAV = [
   { href: "/", label: "Today", icon: Home },
@@ -26,11 +28,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {pathname === "/" ? <div className="page-backdrop page-backdrop-today" aria-hidden /> : null}
-      {pathname.startsWith("/journey") ? <div className="page-backdrop page-backdrop-journey" aria-hidden /> : null}
+      {pathname === "/" ? <MedicalBackdrop variant="today" /> : null}
+      {pathname.startsWith("/journey") ? <MedicalBackdrop variant="journey" /> : null}
       <div
         className={cn(
-          "page-shell mx-auto flex min-h-dvh flex-col px-4 pb-24 pt-5 md:px-8 md:pb-10",
+          "page-shell mx-auto flex min-h-dvh flex-col px-4 pb-24 pt-5 md:px-10 md:pb-10 xl:px-16",
           ops ? "max-w-7xl" : "max-w-6xl"
         )}
       >
@@ -95,14 +97,14 @@ function Header() {
         <div className="flex min-w-0 items-center gap-3 md:gap-3.5">
           <NidaAvatar size={52} />
           <div className="min-w-0">
-            <p className="font-heading text-[1.55rem] leading-[1.2] text-foreground sm:text-[1.8rem] md:text-[2.15rem]">
+            <p className="font-heading text-[1.55rem] leading-[1.2] text-foreground sm:text-[1.8rem] md:text-[2.2rem]">
               <span className="block sm:inline">Dr. Nida's MCCQE1</span>
               <span className="block sm:ml-0 sm:inline">
                 <span className="hidden sm:inline"> </span>
                 Journey
               </span>
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
+            <BrandSubtitle className="mt-1.5" />
           </div>
         </div>
         <nav className="hidden items-center gap-0.5 pt-1 md:flex">

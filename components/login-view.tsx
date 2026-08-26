@@ -8,6 +8,7 @@ import { FieldLabel } from "@/components/field"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { createClient } from "@/lib/supabase/browser"
 import { NidaAvatar } from "@/components/nida-portrait"
+import { BrandSubtitle } from "@/components/canada-flag"
 
 export function LoginView() {
   const router = useRouter()
@@ -48,7 +49,7 @@ export function LoginView() {
           <p className="font-heading text-[1.75rem] leading-snug">
             Dr. Nida's MCCQE1 Journey
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">From MBBS to Canadian Physician 🇨🇦</p>
+          <BrandSubtitle />
         </div>
       </div>
       <p className="mt-6 text-sm text-muted-foreground">

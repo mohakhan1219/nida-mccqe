@@ -13,7 +13,7 @@ import { accuracyOf, isMockType, scoreOf } from "@/lib/metrics"
 import { catalogName } from "@/lib/stats"
 import { quoteContext, selectDailyQuote } from "@/lib/quote-context"
 import { evidenceBandLabel, goalCountCopy, goalHoursCopy, overallStageLabel, showReadinessPercent, warmCopy } from "@/lib/display"
-import { Clock, HeartPulse, ListChecks, Percent } from "lucide-react"
+import { Clock, Heart, ListChecks, Target } from "lucide-react"
 import { NidaPortrait } from "@/components/nida-portrait"
 
 function isoFromLocal(v: string) {
@@ -202,11 +202,25 @@ export function TodayView() {
 
   return (
     <div className="space-y-5 pb-4">
-      <section className="hero-card overflow-hidden">
-        <div className="grid items-end md:grid-cols-[minmax(0,1.15fr)_minmax(200px,300px)] lg:grid-cols-[minmax(0,1.2fr)_minmax(240px,340px)]">
+      <section className="hero-card relative overflow-hidden">
+        <svg
+          className="pointer-events-none absolute top-[46%] left-6 hidden h-14 w-[58%] text-primary/20 md:block"
+          viewBox="0 0 640 80"
+          fill="none"
+          aria-hidden
+        >
+          <path
+            d="M0 42 H78 l12-22 10 44 14-52 12 30 8-8 H640"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="relative grid items-end md:grid-cols-[minmax(0,1.15fr)_minmax(200px,300px)] lg:grid-cols-[minmax(0,1.2fr)_minmax(240px,340px)]">
           <div className="relative z-10 p-6 pb-2 md:p-8 md:pr-4 md:pb-8">
             <p className="kicker">Welcome back, {snapshot.settings.studentName}</p>
-            <h1 className="font-heading mt-2 max-w-xl text-[1.85rem] leading-snug md:text-[2.15rem]">
+            <h1 className="font-heading mt-2 max-w-xl text-[1.9rem] leading-snug md:text-[2.2rem]">
               Your journey to becoming a Canadian physician starts with today.
             </h1>
             <p className="mt-4 max-w-lg text-sm leading-relaxed md:text-[15px]">{nextAction}</p>
@@ -214,7 +228,7 @@ export function TodayView() {
           </div>
           <NidaPortrait
             priority
-            className="mx-auto h-[230px] w-[min(100%,280px)] md:mx-0 md:h-[300px] md:w-full lg:h-[340px]"
+            className="relative z-10 mx-auto h-[230px] w-[min(100%,280px)] md:mx-0 md:h-[300px] md:w-full lg:h-[340px]"
           />
         </div>
       </section>
@@ -222,7 +236,7 @@ export function TodayView() {
       <section className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
         <Mini label="Study time" value={cnHours(stats.todayHours * 60)} icon={Clock} />
         <Mini label="Questions" value={String(stats.todayQuestions || "—")} icon={ListChecks} />
-        <Mini label="Accuracy" value={formatPercent(stats.todayAccuracy)} icon={Percent} />
+        <Mini label="Accuracy" value={formatPercent(stats.todayAccuracy)} icon={Target} />
         <Mini
           label="Readiness"
           value={showReadinessPercent(readiness) ? overallStageLabel(readiness.state, readiness.examDate) : "Building Baseline"}
@@ -231,7 +245,7 @@ export function TodayView() {
               ? `${readiness.score} · ${evidenceBandLabel(readiness.confidence)}`
               : `Evidence ${evidenceBandLabel(readiness.confidence)}`
           }
-          icon={HeartPulse}
+          icon={Heart}
         />
       </section>
 
@@ -467,13 +481,15 @@ function Mini({
   icon: typeof Clock
 }) {
   return (
-    <div className="soft-card px-3.5 py-3 md:px-4">
-      <div className="flex items-center justify-between gap-2">
+    <div className="soft-card px-3.5 py-3.5 md:px-4">
+      <div className="flex items-start justify-between gap-2">
         <p className="kicker text-[10px] tracking-[0.14em] text-muted-foreground">{label}</p>
-        <Icon className="size-3.5 text-primary/55" aria-hidden />
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full text-primary ring-1 ring-primary/25">
+          <Icon className="size-3.5" strokeWidth={1.75} aria-hidden />
+        </span>
       </div>
-      <p className="mt-1 font-heading text-xl tabular leading-tight md:text-[1.35rem]">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+      <p className="mt-2 font-heading text-[1.35rem] tabular leading-none md:text-[1.5rem]">{value}</p>
+      {hint ? <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   )
 }
