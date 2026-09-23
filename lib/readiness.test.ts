@@ -5,6 +5,7 @@ import { accuracyOf, countsValid, scoreOf, shrinkAccuracy, volumeFactor } from "
 import { computeReadiness } from "@/lib/readiness"
 import { deriveStats } from "@/lib/stats"
 import { backupToPartial, snapshotToBackup } from "@/lib/backup"
+import { normalizeScheduleEvent } from "@/lib/abzi-schedule"
 import type { QuestionBlock, TestMock, WorkspaceSnapshot } from "@/lib/types"
 
 function block(
@@ -179,7 +180,7 @@ describe("empty workspace and backup", () => {
   it("round-trips schedule through backup JSON", () => {
     const snap = emptySnapshot()
     snap.schedule = [
-      {
+      normalizeScheduleEvent({
         id: "evt-1",
         date: "2026-09-01",
         startTime: "09:00",
@@ -190,7 +191,7 @@ describe("empty workspace and backup", () => {
         courseId: "course:abzi",
         status: "scheduled",
         notes: "",
-      },
+      }),
     ]
     const file = snapshotToBackup(snap)
     const restored = backupToPartial(file)

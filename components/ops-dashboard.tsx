@@ -7,7 +7,7 @@ import { catalogByKind } from "@/lib/catalogs"
 import { catalogName } from "@/lib/stats"
 import { cnHours, formatHoursMinutes, formatPercent } from "@/lib/format"
 import { accuracyOf, scoreOf } from "@/lib/metrics"
-import { todayKey } from "@/lib/dates"
+import { addDaysKey, todayKey, weekStartKey } from "@/lib/dates"
 import {
   evidenceBandLabel,
   formatLastActivity,
@@ -40,6 +40,7 @@ import {
 import type { SubjectHealth } from "@/lib/stats"
 import { cn } from "@/lib/utils"
 import { needsConfirmation, rawElapsedMinutes } from "@/lib/session-safety"
+import { computeAbziProgress } from "@/lib/abzi-schedule"
 
 const CHART_H = 128
 
@@ -70,6 +71,10 @@ export function OpsDashboard() {
   const mocks = mockSeries(filtered)
   const trend = readinessTrend(snapshot, window.start, window.end)
   const today = todayKey(snapshot.settings.timezone)
+  const abzi = useMemo(() => {
+    const weekStart = weekStartKey(new Date(), snapshot.settings.timezone)
+    return computeAbziProgress(snapshot.schedule, today, weekStart, addDaysKey(weekStart, 7))
+  }, [snapshot.schedule, snapshot.settings.timezone, today])
   const showScore = showReadinessPercent(readiness)
   const hourGoal = goalProgress(stats.week.hours, snapshot.settings.weeklyHourGoal)
   const qGoal = goalProgress(stats.week.questions, snapshot.settings.weeklyQuestionGoal)
@@ -207,6 +212,24 @@ export function OpsDashboard() {
           tone={weekly.status ? "good" : hourGoal.percent === 0 && qGoal.percent === 0 ? "neutral" : "warn"}
         />
       </div>
+
+      {abzi.all.length ? (
+        <div className="ops-panel px-2.5 py-2 text-[11px] text-muted-foreground">
+          <span className="font-medium tracking-wide text-foreground uppercase">ABZI</span>
+          <span className="mx-2 text-border">·</span>
+          Classes {abzi.classesAttended}/{abzi.classesTotal}
+          <span className="mx-2 text-border">·</span>
+          Tests {abzi.testsRecorded}/{abzi.testsTotal}
+          <span className="mx-2 text-border">·</span>
+          {abzi.pastOpen.length ? `${abzi.pastOpen.length} past open` : "No past open"}
+          {abzi.upcoming ? (
+            <>
+              <span className="mx-2 text-border">·</span>
+              Next {abzi.upcoming.date} {abzi.upcoming.title}
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="ops-panel flex flex-wrap items-center gap-2 px-2.5 py-2">
         {(["today", "7d", "30d", "all"] as OpsRange[]).map((r) => (

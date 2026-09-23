@@ -174,6 +174,8 @@ export type Course = {
   notes: string
 }
 
+export type ScheduleAttendance = "attended" | "missed" | null
+
 export type ScheduleEvent = {
   id: string
   date: string
@@ -185,6 +187,21 @@ export type ScheduleEvent = {
   courseId: string | null
   status: "scheduled" | "completed" | "cancelled"
   notes: string
+  /** Display title (e.g. Cardiology, MCQ Test, ENT / Statistics). */
+  title: string
+  /** Topic labels for multi-topic class dates; one shared time block. */
+  topics: string[]
+  /** Deterministic seed key — used for idempotent import; never overwrite on re-seed. */
+  externalId: string | null
+  /** Class attendance; independent of calendar date and study-session hours. */
+  attendance: ScheduleAttendance
+  prepDone: boolean
+  practiceDone: boolean
+  reviewDone: boolean
+  /** Friday MCQ times are provisional until confirmed. */
+  timeTentative: boolean
+  /** Link to an existing question block / Abzi exam assessment id. */
+  linkedAssessmentId: string | null
 }
 
 export type MotivationMessage = {

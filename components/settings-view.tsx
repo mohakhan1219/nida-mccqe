@@ -217,7 +217,7 @@ export function SettingsView() {
       <CatalogEditor kind="error_type" title="Error Types" summary={`${activeOf("error_type")} active`} />
 
       <SettingsFold title="Courses & Question Banks" summary={`${snapshot.courses.length} configured`}>
-        <p className="text-sm text-muted-foreground">Abzi schedule remains empty until you add unit or question targets.</p>
+        <p className="text-sm text-muted-foreground">ABZI units/questions targets stay optional — use the Schedule editor and Journey ABZI panel for course attendance.</p>
         {snapshot.courses.map((c) => (
           <div key={c.id} className="grid gap-2 border-t border-border/60 py-3 md:grid-cols-4">
             <p className="pt-2 text-sm font-medium">{c.name}</p>
@@ -374,11 +374,15 @@ function ScheduleEditor({ summary }: { summary: string }) {
   const subjects = catalogByKind(snapshot.catalogs, "subject")
   const rows = [...snapshot.schedule].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))
   const [date, setDate] = useState("")
-  const [startTime, setStartTime] = useState("09:00")
-  const [endTime, setEndTime] = useState("11:00")
-  const [eventType, setEventType] = useState("Lecture")
+  const [startTime, setStartTime] = useState("20:00")
+  const [endTime, setEndTime] = useState("23:00")
+  const [eventType, setEventType] = useState("Class")
+  const [title, setTitle] = useState("")
+  const [topicsText, setTopicsText] = useState("")
   const [subjectId, setSubjectId] = useState("")
   const [courseId, setCourseId] = useState(snapshot.courses.find((c) => c.id === "course:abzi")?.id ?? snapshot.courses[0]?.id ?? "")
+  const [timezone, setTimezone] = useState("America/New_York")
+  const [timeTentative, setTimeTentative] = useState(false)
   const [notes, setNotes] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -387,51 +391,70 @@ function ScheduleEditor({ summary }: { summary: string }) {
       toast.error("Choose a date")
       return
     }
+    const existing = editingId ? snapshot.schedule.find((r) => r.id === editingId) : null
+    const topics = topicsText
+      .split(/[,/|]/)
+      .map((t) => t.trim())
+      .filter(Boolean)
     const row: ScheduleEvent = {
       id: editingId ?? newId(),
       date,
       startTime,
       endTime,
-      timezone: snapshot.settings.timezone,
+      timezone: timezone.trim() || snapshot.settings.timezone,
       eventType,
       subjectId: subjectId || null,
       courseId: courseId || null,
-      status: "scheduled",
+      status: existing?.status ?? "scheduled",
       notes,
+      title: title.trim() || topics[0] || eventType,
+      topics: topics.length ? topics : [title.trim() || eventType],
+      externalId: existing?.externalId ?? null,
+      attendance: existing?.attendance ?? null,
+      prepDone: existing?.prepDone ?? false,
+      practiceDone: existing?.practiceDone ?? false,
+      reviewDone: existing?.reviewDone ?? false,
+      timeTentative,
+      linkedAssessmentId: existing?.linkedAssessmentId ?? null,
     }
     try {
       await upsertSchedule(row)
       toast.success("Schedule saved")
       setNotes("")
       setEditingId(null)
+      setTitle("")
+      setTopicsText("")
+      setTimeTentative(false)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save schedule")
     }
   }
 
   return (
-    <SettingsFold title="Schedule" summary={summary}>
+    <SettingsFold title="Schedule" summary={summary} defaultOpen={rows.some((r) => r.courseId === "course:abzi")}>
       <p className="text-sm text-muted-foreground">
-        Abzi, Felipe, or any planned block. Empty until you add it — nothing is preloaded from Excel.
+        Edit ABZI or any planned block. Seeded ABZI events keep your edits on refresh — re-import never overwrites them.
       </p>
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Schedule not added yet.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="max-h-80 space-y-2 overflow-y-auto">
           {rows.map((row) => (
             <li key={row.id} className="flex items-start justify-between gap-3 border-t border-border/60 py-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium">
                   {row.date} · {row.startTime}–{row.endTime}
+                  {row.timeTentative ? " · tentative" : ""}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {row.eventType}
+                  {row.title || row.eventType}
+                  {row.topics.length > 1 ? ` · ${row.topics.join(" / ")}` : ""}
                   {row.subjectId ? ` · ${snapshot.catalogs.find((c) => c.id === row.subjectId)?.name}` : ""}
                   {row.courseId ? ` · ${snapshot.courses.find((c) => c.id === row.courseId)?.name}` : ""}
                 </p>
                 {row.notes ? <p className="mt-1 text-sm">{row.notes}</p> : null}
               </div>
-              <div className="flex gap-1">
+              <div className="flex shrink-0 gap-1">
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -440,8 +463,12 @@ function ScheduleEditor({ summary }: { summary: string }) {
                     setStartTime(row.startTime)
                     setEndTime(row.endTime)
                     setEventType(row.eventType)
+                    setTitle(row.title)
+                    setTopicsText(row.topics.join(", "))
                     setSubjectId(row.subjectId ?? "")
                     setCourseId(row.courseId ?? "")
+                    setTimezone(row.timezone)
+                    setTimeTentative(row.timeTentative)
                     setNotes(row.notes)
                   }}
                 >
@@ -469,9 +496,21 @@ function ScheduleEditor({ summary }: { summary: string }) {
           <Input type="time" className="h-10" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
         </div>
         <div>
+          <FieldLabel>Title</FieldLabel>
+          <Input className="h-10" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Cardiology" />
+        </div>
+        <div>
+          <FieldLabel>Topics</FieldLabel>
+          <Input className="h-10" value={topicsText} onChange={(e) => setTopicsText(e.target.value)} placeholder="ENT, Statistics" />
+        </div>
+        <div>
+          <FieldLabel>Timezone</FieldLabel>
+          <Input className="h-10" value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+        </div>
+        <div>
           <FieldLabel>Type</FieldLabel>
           <NativeSelect value={eventType} onChange={(e) => setEventType(e.target.value)}>
-            {["Lecture", "Tutorial", "Question block", "Review", "Mock", "Other"].map((t) => (
+            {["Class", "MCQ Test", "Lecture", "Tutorial", "Question block", "Review", "Mock", "Other"].map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -501,6 +540,10 @@ function ScheduleEditor({ summary }: { summary: string }) {
           </NativeSelect>
         </div>
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={timeTentative} onChange={(e) => setTimeTentative(e.target.checked)} />
+        Time is tentative (Friday tests)
+      </label>
       <div>
         <FieldLabel>Notes</FieldLabel>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />

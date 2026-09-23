@@ -197,7 +197,7 @@ export const DEFAULT_COURSES = [
     completedQuestions: 0,
     currentSubjectId: null,
     status: "not_started" as const,
-    notes: "Schedule not added yet.",
+    notes: "ABZI 2026 course schedule (33 events). Attendance tracked separately from study hours.",
   },
   {
     id: "course:medcognito",

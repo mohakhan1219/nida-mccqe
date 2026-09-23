@@ -8,11 +8,11 @@ Nida opens the app on her iPhone, iPad, or laptop, logs a session in about a min
 
 ## What this is
 
-- **Today** — Start Session / End Session (or manual times) and optional question/test logging
-- **Journey** — executive readiness, weekly targets, recommended focus, subject board
+- **Today** — Start Session / End Session (or manual times), optional question/test logging, and the ABZI course card (next class/test + this week)
+- **Journey** — executive readiness, weekly targets, recommended focus, subject board, and ABZI course progress (33-event calendar)
 - **Review** — incorrect-review queue with 1 / 7 / 21 day intervals
 - **History** — edit or delete any record; calculations update immediately
-- **Settings** — catalogs, targets, readiness weights, courses, Abzi/Felipe schedule, exam date, backup
+- **Settings** — catalogs, targets, readiness weights, courses, editable ABZI/Felipe schedule, exam date, backup
 - **Ops** (`/ops`) — Mudasir’s read-only observability dashboard (hidden from Nida’s tab bar; preview banner link)
 
 Production launches with **no fake study history**. Empty states are intentional.
@@ -46,6 +46,8 @@ Nida must not depend on this computer or Cursor. Deploy to **Vercel** and store 
 4. Disable public sign-ups (invite-only).
 5. Authentication → Users → add Nida’s email and a password (role: primary is assigned automatically for the first user).
 6. For a later household/admin login, create a second Auth user, then insert a `profiles` row with `role = 'admin'` and the same `workspace_id`.
+
+**Existing production DBs** (schema already applied once): also run the additive migration [`supabase/migrations/20260923_abzi_schedule.sql`](supabase/migrations/20260923_abzi_schedule.sql) in the SQL editor before deploying the ABZI schedule feature. It only adds columns/indexes — it does not delete data. After deploy, the app inserts the 33 ABZI events once per workspace (idempotent by `external_id`) and will not overwrite edited times or notes.
 
 Copy the project URL and anon key into Vercel env vars:
 

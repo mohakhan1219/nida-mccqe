@@ -26,6 +26,7 @@ import {
   defaultQuotes,
   emptySnapshot,
 } from "@/lib/catalogs"
+import { applyAbziSeedToSnapshot, normalizeScheduleEvent } from "@/lib/abzi-schedule"
 import { backupToPartial, snapshotToBackup } from "@/lib/backup"
 import { durationMinutes, nowIso } from "@/lib/dates"
 import { newId } from "@/lib/format"
@@ -56,6 +57,8 @@ type SaveBlockInput = {
   sendIncorrectsToReview: boolean
   kind: "block" | "test"
   testName?: string
+  /** Optional link from a Friday ABZI event to this assessment. */
+  scheduleEventId?: string
 }
 
 type Ctx = {
@@ -126,7 +129,7 @@ function mergeSnapshot(raw: Partial<WorkspaceSnapshot> | null): WorkspaceSnapsho
     blocks: raw.blocks ?? [],
     tests: raw.tests ?? [],
     reviews: raw.reviews ?? [],
-    schedule: raw.schedule ?? [],
+    schedule: (raw.schedule ?? []).map((row) => normalizeScheduleEvent(row)),
   }
 }
 
@@ -145,9 +148,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const loadLocal = useCallback(() => {
     try {
       const raw = localStorage.getItem(LOCAL_KEY)
-      persistLocal(mergeSnapshot(raw ? JSON.parse(raw) : null))
+      const merged = mergeSnapshot(raw ? JSON.parse(raw) : null)
+      const { snapshot: seeded } = applyAbziSeedToSnapshot(merged)
+      persistLocal(seeded)
     } catch {
-      persistLocal(emptySnapshot())
+      const { snapshot: seeded } = applyAbziSeedToSnapshot(emptySnapshot())
+      persistLocal(seeded)
     }
   }, [persistLocal])
 
@@ -261,7 +267,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       ...((settingsRes.data?.data as Partial<Settings>) ?? {}),
     }
 
-    setSnapshot({
+    let schedule = (scheduleRes.data ?? []).map(mapSchedule)
+    const seeded = applyAbziSeedToSnapshot({
       workspaceId: wid,
       profile: {
         userId: user.id,
@@ -276,8 +283,47 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       tests: (testsRes.data ?? []).map(mapTest),
       reviews: (reviewsRes.data ?? []).map(mapReview),
       courses,
-      schedule: (scheduleRes.data ?? []).map(mapSchedule),
+      schedule,
       quotes,
+    })
+    if (seeded.inserted.length) {
+      await supabase.from("schedule_events").upsert(seeded.inserted.map((r) => scheduleRow(r, wid)))
+      schedule = seeded.snapshot.schedule
+    } else {
+      schedule = seeded.snapshot.schedule
+    }
+    const abziBefore = courses.find((c) => c.id === "course:abzi")
+    courses = seeded.snapshot.courses
+    const abziAfter = courses.find((c) => c.id === "course:abzi")
+    if (
+      abziAfter &&
+      (abziBefore?.notes !== abziAfter.notes ||
+        abziBefore?.startDate !== abziAfter.startDate ||
+        abziBefore?.targetEndDate !== abziAfter.targetEndDate ||
+        abziBefore?.status !== abziAfter.status)
+    ) {
+      await supabase.from("courses").upsert({
+        workspace_id: wid,
+        id: abziAfter.id,
+        slug: abziAfter.id.replace(/^course:/, ""),
+        name: abziAfter.name,
+        type: abziAfter.type,
+        start_date: abziAfter.startDate,
+        target_end_date: abziAfter.targetEndDate,
+        total_units: abziAfter.totalUnits,
+        completed_units: abziAfter.completedUnits,
+        total_questions: abziAfter.totalQuestions,
+        completed_questions: abziAfter.completedQuestions,
+        current_subject_id: abziAfter.currentSubjectId,
+        status: abziAfter.status,
+        notes: abziAfter.notes,
+      })
+    }
+
+    setSnapshot({
+      ...seeded.snapshot,
+      schedule,
+      courses,
     })
     setError(null)
   }, [])
@@ -653,7 +699,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    await commit({ ...snapshot, sessions, blocks, tests, reviews })
+    let schedule = snapshot.schedule
+    if (input.scheduleEventId) {
+      const event = schedule.find((s) => s.id === input.scheduleEventId)
+      if (event && !event.linkedAssessmentId) {
+        const linked = normalizeScheduleEvent({
+          ...event,
+          linkedAssessmentId: id,
+          attendance: event.attendance ?? "attended",
+        })
+        schedule = schedule.map((s) => (s.id === linked.id ? linked : s))
+        if (configured) {
+          const supabase = createClient()
+          await supabase.from("schedule_events").upsert(scheduleRow(linked, snapshot.workspaceId))
+        }
+      }
+    }
+
+    await commit({ ...snapshot, sessions, blocks, tests, reviews, schedule })
   }
 
   async function writeSession(row: StudySession, del = false) {
@@ -818,14 +881,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   const upsertSchedule: Ctx["upsertSchedule"] = async (row) => {
-    const exists = snapshot.schedule.some((s) => s.id === row.id)
+    const normalized = normalizeScheduleEvent(row)
+    const exists = snapshot.schedule.some((s) => s.id === normalized.id)
     const schedule = exists
-      ? snapshot.schedule.map((s) => (s.id === row.id ? row : s))
-      : [...snapshot.schedule, row]
+      ? snapshot.schedule.map((s) => (s.id === normalized.id ? normalized : s))
+      : [...snapshot.schedule, normalized]
     await commit({ ...snapshot, schedule })
     if (configured) {
       const supabase = createClient()
-      const { error: err } = await supabase.from("schedule_events").upsert(scheduleRow(row, snapshot.workspaceId))
+      const { error: err } = await supabase.from("schedule_events").upsert(scheduleRow(normalized, snapshot.workspaceId))
       if (err) throw err
     }
   }
@@ -863,7 +927,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const restoreBackup: Ctx["restoreBackup"] = async (file) => {
     const partial = backupToPartial(file)
-    const next = { ...snapshot, ...partial }
+    const { snapshot: seeded } = applyAbziSeedToSnapshot({ ...snapshot, ...partial })
+    const next = seeded
     await commit(next)
     if (configured) {
       const supabase = createClient()
@@ -1091,7 +1156,20 @@ function mapReview(row: Record<string, unknown>): IncorrectReview {
 }
 
 function mapSchedule(row: Record<string, unknown>): WorkspaceSnapshot["schedule"][number] {
-  return {
+  const topicsRaw = row.topics
+  const topics = Array.isArray(topicsRaw)
+    ? topicsRaw.map(String)
+    : typeof topicsRaw === "string"
+      ? (() => {
+          try {
+            const parsed = JSON.parse(topicsRaw)
+            return Array.isArray(parsed) ? parsed.map(String) : []
+          } catch {
+            return []
+          }
+        })()
+      : []
+  return normalizeScheduleEvent({
     id: String(row.id),
     date: String(row.event_date),
     startTime: String(row.start_time),
@@ -1102,7 +1180,16 @@ function mapSchedule(row: Record<string, unknown>): WorkspaceSnapshot["schedule"
     courseId: row.course_id ? String(row.course_id) : null,
     status: row.status as WorkspaceSnapshot["schedule"][number]["status"],
     notes: String(row.notes ?? ""),
-  }
+    title: String(row.title ?? ""),
+    topics,
+    externalId: row.external_id ? String(row.external_id) : null,
+    attendance: (row.attendance as WorkspaceSnapshot["schedule"][number]["attendance"]) ?? null,
+    prepDone: Boolean(row.prep_done),
+    practiceDone: Boolean(row.practice_done),
+    reviewDone: Boolean(row.review_done),
+    timeTentative: Boolean(row.time_tentative),
+    linkedAssessmentId: row.linked_assessment_id ? String(row.linked_assessment_id) : null,
+  })
 }
 
 function mapCourse(row: Record<string, unknown>): Course {
@@ -1197,18 +1284,28 @@ function testRow(row: TestMock, workspaceId: string) {
 }
 
 function scheduleRow(row: ScheduleEvent, workspaceId: string) {
+  const normalized = normalizeScheduleEvent(row)
   return {
-    id: row.id,
+    id: normalized.id,
     workspace_id: workspaceId,
-    event_date: row.date,
-    start_time: row.startTime,
-    end_time: row.endTime,
-    timezone: row.timezone,
-    event_type: row.eventType,
-    subject_id: row.subjectId,
-    course_id: row.courseId,
-    status: row.status,
-    notes: row.notes,
+    event_date: normalized.date,
+    start_time: normalized.startTime,
+    end_time: normalized.endTime,
+    timezone: normalized.timezone,
+    event_type: normalized.eventType,
+    subject_id: normalized.subjectId,
+    course_id: normalized.courseId,
+    status: normalized.status,
+    notes: normalized.notes,
+    title: normalized.title,
+    topics: normalized.topics,
+    external_id: normalized.externalId,
+    attendance: normalized.attendance,
+    prep_done: normalized.prepDone,
+    practice_done: normalized.practiceDone,
+    review_done: normalized.reviewDone,
+    time_tentative: normalized.timeTentative,
+    linked_assessment_id: normalized.linkedAssessmentId,
   }
 }
 

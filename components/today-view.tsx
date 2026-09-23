@@ -26,6 +26,7 @@ import {
 } from "@/lib/session-safety"
 import { Clock, Heart, HeartPulse, ListChecks, Square, Target } from "lucide-react"
 import { NidaPortrait } from "@/components/nida-portrait"
+import { AbziCourseCard } from "@/components/abzi-course-card"
 import {
   Dialog,
   DialogContent,
@@ -535,14 +536,17 @@ export function TodayView() {
         {goalCountCopy(stats.week.questions, snapshot.settings.weeklyQuestionGoal)}
       </p>
 
+      <AbziCourseCard />
+
       {todayEvents.length ? (
         <section className="soft-card p-5">
-          <h2 className="font-heading text-lg">Today's schedule</h2>
+          <h2 className="font-heading text-lg">Today&apos;s schedule</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {todayEvents.map((row) => (
               <li key={row.id}>
-                {row.startTime}–{row.endTime} · {row.eventType}
+                {row.startTime}–{row.endTime} · {row.title || row.eventType}
                 {row.subjectId ? ` · ${catalogName(snapshot, row.subjectId)}` : ""}
+                {row.timeTentative ? " · tentative" : ""}
               </li>
             ))}
           </ul>

@@ -23,6 +23,8 @@ import { GoalMeter } from "@/components/goal-meter"
 import { AccuracyLineChart, HoursByDayChart, MockLineChart, QuestionsByDayChart, SubjectBars } from "@/components/mini-charts"
 import { Progress } from "@/components/ui/progress"
 import { NidaPortrait } from "@/components/nida-portrait"
+import { AbziJourneyPanel } from "@/components/abzi-journey-panel"
+import { eventDisplayTitle } from "@/lib/abzi-schedule"
 
 export function JourneyView() {
   const { snapshot, stats, readiness, loading } = useWorkspace()
@@ -198,11 +200,12 @@ export function JourneyView() {
             {upcoming.map((row) => (
               <li key={row.id} className="flex justify-between gap-3">
                 <span>
-                  {row.date} · {row.eventType}
+                  {row.date} · {eventDisplayTitle(row)}
                   {row.subjectId ? ` · ${catalogName(snapshot, row.subjectId)}` : ""}
                 </span>
                 <span className="text-muted-foreground">
                   {row.startTime}–{row.endTime}
+                  {row.timeTentative ? " · tent." : ""}
                 </span>
               </li>
             ))}
@@ -211,6 +214,8 @@ export function JourneyView() {
       ) : (
         <p className="text-sm text-muted-foreground">Schedule not added yet.</p>
       )}
+
+      <AbziJourneyPanel />
 
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-foreground/8 [&::-webkit-details-marker]:hidden">
@@ -263,7 +268,7 @@ export function JourneyView() {
                     <span className="text-muted-foreground">
                       {!unitTarget && !qTarget
                         ? c.name === "Abzi"
-                          ? "Schedule not added yet"
+                          ? "See ABZI course progress above"
                           : "Add a target in Settings"
                         : unitTarget
                           ? `${c.completedUnits} of ${c.totalUnits} units`

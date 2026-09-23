@@ -1,5 +1,6 @@
 import type { BackupFile, WorkspaceSnapshot } from "@/lib/types"
 import { DEFAULT_CATALOGS, DEFAULT_COURSES, DEFAULT_SETTINGS, defaultQuotes } from "@/lib/catalogs"
+import { normalizeScheduleEvent } from "@/lib/abzi-schedule"
 
 export function snapshotToBackup(snapshot: WorkspaceSnapshot): BackupFile {
   return {
@@ -30,7 +31,7 @@ export function backupToPartial(file: BackupFile): Omit<WorkspaceSnapshot, "prof
     tests: s.tests ?? [],
     reviews: s.reviews ?? [],
     courses: s.courses?.length ? s.courses : DEFAULT_COURSES,
-    schedule: s.schedule ?? [],
+    schedule: (s.schedule ?? []).map((row) => normalizeScheduleEvent(row)),
     quotes: s.quotes?.length ? s.quotes : defaultQuotes(),
   }
 }

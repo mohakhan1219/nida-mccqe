@@ -166,8 +166,21 @@ create table if not exists public.schedule_events (
   subject_id text,
   course_id text,
   status text not null default 'scheduled',
-  notes text not null default ''
+  notes text not null default '',
+  title text not null default '',
+  topics jsonb not null default '[]'::jsonb,
+  external_id text,
+  attendance text,
+  prep_done boolean not null default false,
+  practice_done boolean not null default false,
+  review_done boolean not null default false,
+  time_tentative boolean not null default false,
+  linked_assessment_id text
 );
+
+create unique index if not exists schedule_events_workspace_external_id_uidx
+  on public.schedule_events (workspace_id, external_id)
+  where external_id is not null;
 
 create table if not exists public.motivation_messages (
   workspace_id uuid not null references public.workspaces (id) on delete cascade,
