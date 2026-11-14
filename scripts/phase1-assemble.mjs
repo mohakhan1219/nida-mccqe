@@ -5,12 +5,13 @@ import { fileURLToPath } from 'node:url'
 import { inflateSync } from 'node:zlib'
 
 /**
- * Restores today/journey/workspace from zlib staging ONLY when the working
+ * Restores product files from zlib staging ONLY when the working
  * tree still has stub/placeholder product files. Never overwrite real feature
  * work on a development branch.
  */
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
-const manifestPath = join(root, '.cursor/phase1-restore/manifest.json')
+const restoreDir = join(root, '.cursor/phase1-restore')
+const manifestPath = join(restoreDir, 'manifest.json')
 
 if (!existsSync(manifestPath)) {
   console.log('phase1-assemble: no staging manifest; skip')
@@ -25,10 +26,24 @@ function looksLikeStub(path, minBytes = 1000) {
   if (text.includes('PLACEHOLDER_WILL_FAIL')) return true
   if (text.includes('$file:')) return true
   if (text.length < minBytes) return true
-  // Temporary loading stub used during Phase 1 deploy recovery
   if (text.includes('Loading today') && text.length < 400) return true
   return false
 }
+
+function ensureCatalogZlib() {
+  const out = join(restoreDir, 'catalog.zlib.b64')
+  const parts = []
+  for (let i = 1; i <= 9; i++) {
+    const p = join(restoreDir, `catalog.zlib.b64.z0${i}`)
+    if (!existsSync(p)) return
+    parts.push(readFileSync(p, 'utf8').replace(/\n/g, ''))
+  }
+  const joined = parts.join('')
+  writeFileSync(out, joined)
+  console.log(`phase1-assemble: concatenated catalog zlib (${joined.length} chars)`)
+}
+
+ensureCatalogZlib()
 
 let restored = 0
 for (const [key, meta] of Object.entries(man)) {
