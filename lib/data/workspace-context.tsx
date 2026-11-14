@@ -381,4 +381,141 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     const seeded = applyAbziSeedToSnapshot({
-      workspaceId: w
+      workspaceId: wid,
+      profile: {
+        userId: user.id,
+        email: user.email ?? "",
+        displayName: profile.display_name,
+        role: profile.role,
+      },
+      settings,
+      catalogs,
+      sessions,
+      blocks: (blocksRes.data ?? []).map(mapBlock),
+      tests: (testsRes.data ?? []).map(mapTest),
+      reviews: (reviewsRes.data ?? []).map(mapReview),
+      courses,
+      schedule,
+      quotes,
+      qbankSnapshots,
+      highYieldTopics,
+      practiceAssessments,
+    })
+    if (seeded.inserted.length) {
+      await supabase.from("schedule_events").upsert(seeded.inserted.map((r) => scheduleRow(r, wid)))
+      schedule = seeded.snapshot.schedule
+    } else {
+      schedule = seeded.snapshot.schedule
+    }
+    const abziBefore = courses.find((c) => c.id === "course:abzi")
+    courses = seeded.snapshot.courses
+    const abziAfter = courses.find((c) => c.id === "course:abzi")
+    if (
+      abziAfter &&
+      (abziBefore?.notes !== abziAfter.notes ||
+        abziBefore?.startDate !== abziAfter.startDate ||
+        abziBefore?.targetEndDate !== abziAfter.targetEndDate ||
+        abziBefore?.status !== abziAfter.status)
+    ) {
+      await supabase.from("courses").upsert({
+        workspace_id: wid,
+        id: abziAfter.id,
+        slug: abziAfter.id.replace(/^course:/, ""),
+        name: abziAfter.name,
+        type: abziAfter.type,
+        start_date: abziAfter.startDate,
+        target_end_date: abziAfter.targetEndDate,
+        total_units: abziAfter.totalUnits,
+        completed_units: abziAfter.completedUnits,
+        total_questions: abziAfter.totalQuestions,
+        completed_questions: abziAfter.completedQuestions,
+        current_subject_id: abziAfter.currentSubjectId,
+        status: abziAfter.status,
+        notes: abziAfter.notes,
+      })
+    }
+
+    let nextSettings = seeded.snapshot.settings
+    const planningProbe = computeExamPlanning(
+      { ...seeded.snapshot, schedule, courses, settings: nextSettings },
+      deriveStats({ ...seeded.snapshot, schedule, courses, settings: nextSettings })
+    )
+    if (planningProbe.shouldCreateSuggestedTarget && planningProbe.proposedSuggestedDate) {
+      nextSettings = withSuggestedExamTarget(nextSettings, planningProbe.proposedSuggestedDate)
+      await supabase.from("settings").upsert({ workspace_id: wid, data: nextSettings, updated_at: nowIso() })
+    }
+
+    setSnapshot({
+      ...seeded.snapshot,
+      schedule,
+      courses,
+      settings: nextSettings,
+      qbankSnapshots,
+      highYieldTopics,
+      practiceAssessments,
+    })
+    setError(null)
+  }, [])
+
+  const refresh = useCallback(async () => {
+    if (!configured) {
+      loadLocal()
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    try {
+      await loadCloud()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load workspace")
+    } finally {
+      setLoading(false)
+    }
+  }, [configured, loadCloud, loadLocal])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  useEffect(() => {
+    if (!configured) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel("nida-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "study_sessions" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "question_blocks" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tests_mocks" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "incorrect_reviews" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "settings" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes
