@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   ABZI_CLASS_COUNT,
+  ABZI_COURSE_END_DATE,
   ABZI_COURSE_TIMEZONE,
   ABZI_EVENT_COUNT,
   ABZI_SEED_DEFS,
@@ -8,10 +9,12 @@ import {
   buildAbziSeedEvents,
   classCompleted,
   computeAbziProgress,
+  ensureAbziCourseMeta,
   mergeAbziSchedule,
   normalizeScheduleEvent,
   testRecorded,
 } from "@/lib/abzi-schedule"
+import { DEFAULT_COURSES } from "@/lib/catalogs"
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz"
 
 describe("ABZI 2026 schedule seed", () => {
@@ -102,5 +105,14 @@ describe("ABZI 2026 schedule seed", () => {
     expect(testRecorded(friday)).toBe(false)
     const linked = normalizeScheduleEvent({ ...friday, linkedAssessmentId: "block-1" })
     expect(testRecorded(linked)).toBe(true)
+  })
+
+  it("stores course end date 2026-12-18 without changing the 33 schedule events", () => {
+    expect(ABZI_COURSE_END_DATE).toBe("2026-12-18")
+    const events = buildAbziSeedEvents()
+    expect(events).toHaveLength(33)
+    expect(events.at(-1)?.date).toBe("2026-12-11")
+    const courses = ensureAbziCourseMeta(DEFAULT_COURSES)
+    expect(courses.find((c) => c.id === "course:abzi")?.targetEndDate).toBe("2026-12-18")
   })
 })
