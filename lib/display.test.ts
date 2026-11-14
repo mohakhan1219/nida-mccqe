@@ -104,7 +104,7 @@ describe("settings and subject-health labels", () => {
 
 describe("exam countdown display", () => {
   it("never shows a negative countdown as On track", () => {
-    expect(examCountdownDisplay({ examDate: null, countdown: null }).headline).toBe("Exam not booked yet.")
+    expect(examCountdownDisplay({ examDate: null, countdown: null }).headline).toBe("Not booked")
     expect(examCountdownDisplay({ examDate: "2025-01-01", countdown: -301 }).headline).toBe(
       "Exam date passed — update exam date."
     )
