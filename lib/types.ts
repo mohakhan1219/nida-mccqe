@@ -42,13 +42,19 @@ export type Settings = {
   studentName: string
   examName: string
   examDate: string | null
+  /** Suggested preparation target (not a booking). Persisted once when eligible. */
+  suggestedExamDate: string | null
+  suggestedExamCreatedAt: string | null
   timezone: string
   weekStartsOn: 1
   dailyHourGoal: number
   dailyQuestionGoal: number
   weeklyHourGoal: number
   weeklyQuestionGoal: number
+  /** Readiness-engine accuracy goal (existing composite). */
   accuracyGoal: number
+  /** Personal eligible-question performance benchmark (Phase 1: 72%). */
+  questionAccuracyGoal: number
   reviewIntervals: [number, number, number]
   minQuestionsForSubject: number
   minQuestionsForBaseline: number
@@ -69,6 +75,20 @@ export type Settings = {
   warnSessionHours: number
   longSessionWarningHours: number
   confirmSessionHours: number
+  /** Auto-end a paused session after this many minutes (effective end = pause time). */
+  pauseAutoEndMinutes: number
+  /** Calendar days ahead for a suggested exam target once evidence gates pass. */
+  suggestedExamHorizonDays: number
+  /** Provisional evidence gates for auto-suggesting an exam target. */
+  /** Minimum eligible answered questions before a 100-day target may be suggested (default 4000). */
+  minEligibleQuestionsForTarget: number
+  minSubjectsForTarget: number
+  minMocksForTarget: number
+}
+
+export type SessionPauseInterval = {
+  pausedAt: string
+  resumedAt: string | null
 }
 
 export type StudySession = {
@@ -81,16 +101,56 @@ export type StudySession = {
   endAt: string | null
   durationMinutes: number | null
   entryMode: "timer" | "manual"
-  status: "running" | "completed"
+  status: "running" | "paused" | "completed"
   notes: string
   linkedAssessmentId: string | null
   planned: boolean
   confidence: number | null
   energy: number | null
   confirmedThroughAt: string | null
+  /** Completed and open pause intervals; break time is excluded from study credit. */
+  pauseLog: SessionPauseInterval[]
   createdAt: string
   updatedAt: string
 }
+
+export type QBankSnapshot = {
+  id: string
+  sourceId: string
+  asOfDate: string
+  totalAvailable: number | null
+  used: number | null
+  unused: number | null
+  correct: number | null
+  incorrect: number | null
+  skipped: number | null
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type HighYieldPriority = "very_high" | "high" | "medium" | "low"
+export type HighYieldStatus = "not_started" | "in_progress" | "completed" | "needs_review"
+
+export type HighYieldTopic = {
+  id: string
+  subject: string
+  topic: string
+  priority: HighYieldPriority
+  status: HighYieldStatus
+  notes: string
+  source: string
+  sortOrder: number
+  updatedAt: string
+  createdAt: string
+}
+
+export type ExamPlanningState =
+  | "not_ready_to_plan"
+  | "building_evidence"
+  | "target_eligible"
+  | "target_date_suggested"
+  | "exam_booked"
 
 export type QuestionBlock = {
   id: string
@@ -228,6 +288,8 @@ export type WorkspaceSnapshot = {
   courses: Course[]
   schedule: ScheduleEvent[]
   quotes: MotivationMessage[]
+  qbankSnapshots: QBankSnapshot[]
+  highYieldTopics: HighYieldTopic[]
 }
 
 export type BackupFile = {
