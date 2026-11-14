@@ -1,0 +1,20 @@
+{
+  "today": {
+    "staging": ".cursor/phase1-restore/today.zlib.b64",
+    "dest": "components/today-view.tsx",
+    "sha256": "e1308c0fe894b40adf4e7f783f42b64f0a468b44381ba050ccecb55e683bec34",
+    "utf8_len": 31372
+  },
+  "journey": {
+    "staging": ".cursor/phase1-restore/journey.zlib.b64",
+    "dest": "components/journey-view.tsx",
+    "sha256": "89585dd3c934b17aa12882d32668ddb8fe9ce8879e5ead3ba06bf5b15d1ba48a",
+    "utf8_len": 30566
+  },
+  "workspace": {
+    "staging": ".cursor/phase1-restore/workspace.zlib.b64",
+    "dest": "lib/data/workspace-context.tsx",
+    "sha256": "039bba6ec17a097a72e0f83f88429b83ea7a695f2684d7f843d6dcd3cf096191",
+    "utf8_len": 54495
+  }
+}
