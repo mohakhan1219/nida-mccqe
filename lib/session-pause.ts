@@ -151,7 +151,7 @@ export function withSessionEnded(
     effectiveEnd = open.pausedAt
     pauseLog = pauseLog.map((p, i) =>
       i === pauseLog.length - 1 && !p.resumedAt ? { ...p, resumedAt: open.pausedAt } : p
-  )
+    )
   }
   const duration = studyCreditMinutes(
     { ...session, status: "completed", endAt: effectiveEnd, pauseLog, durationMinutes: null },
