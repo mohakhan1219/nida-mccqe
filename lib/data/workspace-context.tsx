@@ -349,4 +349,106 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       quotes = seeded
     }
 
-    const 
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      ...((settingsRes.data?.data as Partial<Settings>) ?? {}),
+    }
+
+    let schedule = (scheduleRes.data ?? []).map(mapSchedule)
+    const qbankSnapshots = (qbankRes.error ? [] : qbankRes.data ?? []).map(mapQBankSnapshot)
+    let highYieldTopics = (highYieldRes.error ? [] : highYieldRes.data ?? []).map(mapHighYieldTopic)
+    const practiceAssessments = (practiceRes.error ? [] : practiceRes.data ?? []).map(mapPracticeAssessment)
+    const hyMerge = mergeFilipeSantosCatalog(highYieldTopics)
+    highYieldTopics = hyMerge.topics
+    if (!highYieldRes.error && (hyMerge.added || hyMerge.updatedMeta)) {
+      const { error: hyUpsertErr } = await supabase
+        .from("high_yield_topics")
+        .upsert(highYieldTopics.map((t) => highYieldRow(t, wid)))
+      // Catalog stays in memory even if catalog_key migration is not applied yet.
+      if (hyUpsertErr) {
+        console.warn("high_yield_topics catalog sync deferred:", hyUpsertErr.message)
+      }
+    }
+    let sessions = (sessionsRes.data ?? []).map(mapSession)
+    const reconciled: StudySession[] = []
+    sessions = sessions.map((s) => {
+      const next = reconcilePausedSession(s, settings)
+      if (next !== s && next.status === "completed") reconciled.push(next)
+      return next
+    })
+    for (const row of reconciled) {
+      await supabase.from("study_sessions").update(sessionRow(row, wid)).eq("id", row.id)
+    }
+
+    const seeded = applyAbziSeedToSnapshot({
+      workspaceId: wid,
+      profile: {
+        userId: user.id,
+        email: user.email ?? "",
+        displayName: profile.display_name,
+        role: profile.role,
+      },
+      settings,
+      catalogs,
+      sessions,
+      blocks: (blocksRes.data ?? []).map(mapBlock),
+      tests: (testsRes.data ?? []).map(mapTest),
+      reviews: (reviewsRes.data ?? []).map(mapReview),
+      courses,
+      schedule,
+      quotes,
+      qbankSnapshots,
+      highYieldTopics,
+      practiceAssessments,
+    })
+    if (seeded.inserted.length) {
+      await supabase.from("schedule_events").upsert(seeded.inserted.map((r) => scheduleRow(r, wid)))
+      schedule = seeded.snapshot.schedule
+    } else {
+      schedule = seeded.snapshot.schedule
+    }
+    const abziBefore = courses.find((c) => c.id === "course:abzi")
+    courses = seeded.snapshot.courses
+    const abziAfter = courses.find((c) => c.id === "course:abzi")
+    if (
+      abziAfter &&
+      (abziBefore?.notes !== abziAfter.notes ||
+        abziBefore?.startDate !== abziAfter.startDate ||
+        abziBefore?.targetEndDate !== abziAfter.targetEndDate ||
+        abziBefore?.status !== abziAfter.status)
+    ) {
+      await supabase.from("courses").upsert({
+        workspace_id: wid,
+        id: abziAfter.id,
+        slug: abziAfter.id.replace(/^course:/, ""),
+        name: abziAfter.name,
+        type: abziAfter.type,
+        start_date: abziAfter.startDate,
+        target_end_date: abziAfter.targetEndDate,
+        total_units: abziAfter.totalUnits,
+        completed_units: abziAfter.completedUnits,
+        total_questions: abziAfter.totalQuestions,
+        completed_questions: abziAfter.completedQuestions,
+        current_subject_id: abziAfter.currentSubjectId,
+        status: abziAfter.status,
+        notes: abziAfter.notes,
+      })
+    }
+
+    let nextSettings = seeded.snapshot.settings
+    const planningProbe = computeExamPlanning(
+      { ...seeded.snapshot, schedule, courses, settings: nextSettings },
+      deriveStats({ ...seeded.snapshot, schedule, courses, settings: nextSettings })
+    )
+    if (planningProbe.shouldCreateSuggestedTarget && planningProbe.proposedSuggestedDate) {
+      nextSettings = withSuggestedExamTarget(nextSettings, planningProbe.proposedSuggestedDate)
+      await supabase.from("settings").upsert({ workspace_id: wid, data: nextSettings, updated_at: nowIso() })
+    }
+
+    setSnapshot({
+      ...seeded.snapshot,
+      schedule,
+      courses,
+      settings: nextSettings,
+      qbankSnapshots,
+      highYiel
