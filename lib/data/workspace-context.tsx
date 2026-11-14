@@ -1300,4 +1300,142 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const updateQuotes: Ctx["updateQuotes"] = async (quotes) => {
     await commit({ ...snapshot, quotes })
     if (configured) {
-      const supabase = 
+      const supabase = createClient()
+      await supabase.from("motivation_messages").upsert(
+        quotes.map((q) => ({
+          workspace_id: snapshot.workspaceId,
+          id: q.id,
+          idx: q.index,
+          theme: q.theme,
+          message: q.message,
+        }))
+      )
+    }
+  }
+
+  const exportBackup = () => {
+    const blob = new Blob([JSON.stringify(snapshotToBackup(snapshot), null, 2)], {
+      type: "application/json",
+    })
+    return blob
+  }
+
+  const restoreBackup: Ctx["restoreBackup"] = async (file) => {
+    const partial = backupToPartial(file)
+    const { snapshot: seeded } = applyAbziSeedToSnapshot({ ...snapshot, ...partial })
+    const next = seeded
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const wid = snapshot.workspaceId
+      await supabase.from("settings").upsert({ workspace_id: wid, data: next.settings })
+      await supabase.from("catalog_items").upsert(
+        next.catalogs.map((c) => ({
+          workspace_id: wid,
+          id: c.id,
+          kind: c.kind,
+          slug: c.slug,
+          name: c.name,
+          active: c.active,
+          sort_order: c.sortOrder,
+          meta: c.meta,
+        }))
+      )
+      for (const table of ["study_sessions", "question_blocks", "tests_mocks", "incorrect_reviews", "schedule_events"] as const) {
+        await supabase.from(table).delete().eq("workspace_id", wid)
+      }
+      if (next.sessions.length) {
+        await supabase.from("study_sessions").insert(next.sessions.map((r) => sessionRow(r, wid)))
+      }
+      if (next.blocks.length) {
+        await supabase.from("question_blocks").insert(next.blocks.map((r) => blockRow(r, wid)))
+      }
+      if (next.tests.length) {
+        await supabase.from("tests_mocks").insert(next.tests.map((r) => testRow(r, wid)))
+      }
+      if (next.reviews.length) {
+        await supabase.from("incorrect_reviews").insert(next.reviews.map((r) => reviewRow(r, wid)))
+      }
+      if (next.schedule.length) {
+        await supabase.from("schedule_events").insert(next.schedule.map((r) => scheduleRow(r, wid)))
+      }
+      await supabase.from("courses").upsert(
+        next.courses.map((row) => ({
+          workspace_id: wid,
+          id: row.id,
+          slug: row.id.replace("course:", ""),
+          name: row.name,
+          type: row.type,
+          start_date: row.startDate,
+          target_end_date: row.targetEndDate,
+          total_units: row.totalUnits,
+          completed_units: row.completedUnits,
+          total_questions: row.totalQuestions,
+          completed_questions: row.completedQuestions,
+          current_subject_id: row.currentSubjectId,
+          status: row.status,
+          notes: row.notes,
+        }))
+      )
+      await supabase.from("motivation_messages").upsert(
+        next.quotes.map((q) => ({
+          workspace_id: wid,
+          id: q.id,
+          idx: q.index,
+          theme: q.theme,
+          message: q.message,
+        }))
+      )
+    }
+  }
+
+  const signOut = async () => {
+    if (configured) {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      window.location.href = "/login"
+    }
+  }
+
+  const value: Ctx = {
+    mode,
+    configured,
+    loading,
+    error,
+    snapshot,
+    stats,
+    readiness,
+    running,
+    refresh,
+    punchIn,
+    punchOut,
+    pauseSession,
+    resumeSession,
+    confirmStillStudying,
+    discardRunning,
+    saveManualSession,
+    saveAssessment,
+    updateSession,
+    deleteSession,
+    updateBlock,
+    deleteBlock,
+    updateTest,
+    deleteTest,
+    upsertReview,
+    deleteReview,
+    updateSettings,
+    resetSuggestedExamTarget,
+    saveQBankSnapshot,
+    deleteQBankSnapshot,
+    upsertHighYieldTopic,
+    deleteHighYieldTopic,
+    ensureHighYieldCatalogImported,
+    upsertPracticeAssessment,
+    completePracticeAssessment,
+    deletePracticeAssessment,
+    confirmOfficialExamBooking,
+    clearMistakenExamDate,
+    updateCatalogItem,
+    addCatalogItem,
+    updateCourse,
+    upsertSchedule
