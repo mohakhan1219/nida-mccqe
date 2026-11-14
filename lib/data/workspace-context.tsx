@@ -129,4 +129,14 @@ type Ctx = {
   updateSession: (row: StudySession) => Promise<void>
   deleteSession: (id: string) => Promise<void>
   updateBlock: (row: QuestionBlock) => Promise<void>
-  deleteBlock: (id: string) => Promise<void
+  deleteBlock: (id: string) => Promise<void>
+  updateTest: (row: TestMock) => Promise<void>
+  deleteTest: (id: string) => Promise<void>
+  upsertReview: (row: IncorrectReview) => Promise<void>
+  deleteReview: (id: string) => Promise<void>
+  updateSettings: (patch: Partial<Settings>) => Promise<void>
+  updateCatalogItem: (item: CatalogItem) => Promise<void>
+  addCatalogItem: (item: CatalogItem) => Promise<void>
+  updateCourse: (row: Course) => Promise<void>
+  upsertSchedule: (row: ScheduleEvent) => Promise<void>
+  deleteSchedule: (id: strin
