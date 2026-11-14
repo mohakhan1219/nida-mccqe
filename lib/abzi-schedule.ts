@@ -65,7 +65,7 @@ export const ABZI_SEED_DEFS: SeedDef[] = [
   },
   { date: "2026-11-06", kind: "test", title: "MCQ Test", topics: ["MCQ Test"], subjectId: null },
   { date: "2026-11-08", kind: "class", title: "Ethics", topics: ["Ethics"], subjectId: "subject:ethics" },
-  { date: "2026-11-10", kind: "class", title: "Psychiatry", topics: ["Psychiatry"], subjectId: "subject:psychiatry" },
+  { date: "2026-11-10", kind: "class", title: "Ethics", topics: ["Ethics"], subjectId: "subject:ethics" },
   { date: "2026-11-13", kind: "test", title: "MCQ Test", topics: ["MCQ Test"], subjectId: null },
   { date: "2026-11-15", kind: "class", title: "Psychiatry", topics: ["Psychiatry"], subjectId: "subject:psychiatry" },
   { date: "2026-11-17", kind: "class", title: "Psychiatry", topics: ["Psychiatry"], subjectId: "subject:psychiatry" },
