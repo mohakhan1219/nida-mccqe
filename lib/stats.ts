@@ -121,7 +121,10 @@ function period(
   const sessions = snapshot.sessions.filter((s) => {
     if (!inRange(s.startAt, start, end, tz)) return false
     if (s.status === "completed") return true
-    return s.status === "running" && creditedDurationMinutes(s, snapshot.settings, now) > 0
+    return (
+      (s.status === "running" || s.status === "paused") &&
+      creditedDurationMinutes(s, snapshot.settings, now) > 0
+    )
   })
   const blocks = snapshot.blocks.filter((b) => inRange(b.startAt, start, end, tz))
   const tests = snapshot.tests.filter((t) => inRange(t.startAt, start, end, tz))
@@ -204,13 +207,17 @@ export function deriveStats(snapshot: WorkspaceSnapshot, now = new Date()): Deri
   const monthEnd = today
 
   const completed = sessions.filter((s) => s.status === "completed")
-  const todaySessions = sessions.filter((s) => dayKey(s.startAt, tz) === today && (s.status === "completed" || s.status === "running"))
+  const todaySessions = sessions.filter(
+    (s) =>
+      dayKey(s.startAt, tz) === today &&
+      (s.status === "completed" || s.status === "running" || s.status === "paused")
+  )
   const todayBlocks = blocks.filter((b) => dayKey(b.startAt, tz) === today)
   const todayHours = todaySessions.reduce((a, s) => a + creditedDurationMinutes(s, settings, now), 0) / 60
   const todayQ = todayBlocks.reduce((a, b) => a + b.total, 0)
   const todayCI = sumCI(todayBlocks)
 
-  const running = sessions.find((s) => s.status === "running")
+  const running = sessions.find((s) => s.status === "running" || s.status === "paused")
   const lastCompleted = [...todaySessions].sort((a, b) => b.startAt.localeCompare(a.startAt))[0]
   const todaySubjectId = running?.subjectId ?? lastCompleted?.subjectId ?? todayBlocks[0]?.subjectId ?? null
 
@@ -300,7 +307,9 @@ function subjectHealth(
   ctx: { today: string; tz: string; settings: Settings }
 ): SubjectHealth {
   const sessions = snapshot.sessions.filter(
-    (s) => s.subjectId === subject.id && (s.status === "completed" || s.status === "running")
+    (s) =>
+      s.subjectId === subject.id &&
+      (s.status === "completed" || s.status === "running" || s.status === "paused")
   )
   const blocks = snapshot.blocks.filter((b) => b.subjectId === subject.id)
   const tests = snapshot.tests.filter((t) => t.subjectId === subject.id)
@@ -440,7 +449,9 @@ function computeRhythm(days: string[], today: string): Rhythm {
 }
 
 export function runningSession(snapshot: WorkspaceSnapshot) {
-  return snapshot.sessions.find((s) => s.status === "running") ?? null
+  return (
+    snapshot.sessions.find((s) => s.status === "running" || s.status === "paused") ?? null
+  )
 }
 
 export function catalogName(snapshot: WorkspaceSnapshot, id: string) {
