@@ -1,1 +1,1 @@
-$file:/workspace/lib/data/workspace-context.tsx
+__ARGUMENTS_FILE__:/tmp/cuf-ws-grow1.json
