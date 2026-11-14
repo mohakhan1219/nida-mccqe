@@ -1543,4 +1543,109 @@ function mapPracticeAssessment(row: Record<string, unknown>): PracticeAssessment
     scheduledDate: String(row.scheduled_date),
     completedDate: row.completed_date ? String(row.completed_date) : null,
     total: row.total == null ? null : Number(row.total),
-    correct: row.correct == null ? null : Number(row.correc
+    correct: row.correct == null ? null : Number(row.correct),
+    incorrect: row.incorrect == null ? null : Number(row.incorrect),
+    scorePct: row.score_pct == null ? null : Number(row.score_pct),
+    notes: String(row.notes ?? ""),
+    linkedTestId: row.linked_test_id ? String(row.linked_test_id) : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }
+}
+
+function mapBlock(row: Record<string, unknown>): QuestionBlock {
+  return {
+    id: String(row.id),
+    subjectId: String(row.subject_id),
+    sourceId: String(row.source_id),
+    assessmentTypeId: String(row.assessment_type_id),
+    topic: String(row.topic ?? ""),
+    startAt: String(row.start_at),
+    endAt: String(row.end_at),
+    durationMinutes: Number(row.duration_minutes),
+    total: Number(row.total),
+    correct: Number(row.correct),
+    incorrect: Number(row.incorrect),
+    skipped: Number(row.skipped),
+    timedMode: (row.timed_mode as QuestionBlock["timedMode"]) ?? "timed",
+    attemptState: (row.attempt_state as QuestionBlock["attemptState"]) ?? "first_pass",
+    notes: String(row.notes ?? ""),
+    linkedSessionId: row.linked_session_id ? String(row.linked_session_id) : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }
+}
+
+function mapTest(row: Record<string, unknown>): TestMock {
+  return {
+    id: String(row.id),
+    subjectId: String(row.subject_id),
+    sourceId: String(row.source_id),
+    assessmentTypeId: String(row.assessment_type_id),
+    testName: String(row.test_name ?? ""),
+    startAt: String(row.start_at),
+    endAt: String(row.end_at),
+    durationMinutes: Number(row.duration_minutes),
+    total: Number(row.total),
+    correct: Number(row.correct),
+    incorrect: Number(row.incorrect),
+    skipped: Number(row.skipped),
+    rank: String(row.rank ?? ""),
+    strongAreas: String(row.strong_areas ?? ""),
+    weakAreas: String(row.weak_areas ?? ""),
+    reviewCompleted: Boolean(row.review_completed),
+    notes: String(row.notes ?? ""),
+    linkedSessionId: row.linked_session_id ? String(row.linked_session_id) : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }
+}
+
+function mapReview(row: Record<string, unknown>): IncorrectReview {
+  return {
+    id: String(row.id),
+    sourceKind: row.source_kind as IncorrectReview["sourceKind"],
+    sourceId: row.source_id ? String(row.source_id) : null,
+    subjectId: String(row.subject_id),
+    providerId: String(row.provider_id),
+    topic: String(row.topic ?? ""),
+    questionCount: Number(row.question_count),
+    errorTypeId: String(row.error_type_id),
+    reason: String(row.reason ?? ""),
+    correctConcept: String(row.correct_concept ?? ""),
+    priority: row.priority as IncorrectReview["priority"],
+    status: row.status as IncorrectReview["status"],
+    firstReviewAt: row.first_review_at ? String(row.first_review_at) : null,
+    secondReviewAt: row.second_review_at ? String(row.second_review_at) : null,
+    thirdReviewAt: row.third_review_at ? String(row.third_review_at) : null,
+    tutorQuestion: String(row.tutor_question ?? ""),
+    flashcardCreated: Boolean(row.flashcard_created),
+    notes: String(row.notes ?? ""),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }
+}
+
+function mapSchedule(row: Record<string, unknown>): WorkspaceSnapshot["schedule"][number] {
+  const topicsRaw = row.topics
+  const topics = Array.isArray(topicsRaw)
+    ? topicsRaw.map(String)
+    : typeof topicsRaw === "string"
+      ? (() => {
+          try {
+            const parsed = JSON.parse(topicsRaw)
+            return Array.isArray(parsed) ? parsed.map(String) : []
+          } catch {
+            return []
+          }
+        })()
+      : []
+  return normalizeScheduleEvent({
+    id: String(row.id),
+    date: String(row.event_date),
+    startTime: String(row.start_time),
+    endTime: String(row.end_time),
+    timezone: String(row.timezone),
+    eventType: String(row.event_type),
+    subjectId: row.subject_id ? String(row.subject_id) : null,
+    courseId
