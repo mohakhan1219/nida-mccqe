@@ -24,9 +24,13 @@ export function SettingsView() {
     exportBackup,
     restoreBackup,
     signOut,
+    confirmOfficialExamBooking,
+    clearMistakenExamDate,
   } = useWorkspace()
   const fileRef = useRef<HTMLInputElement>(null)
   const s = snapshot.settings
+  const [bookingDate, setBookingDate] = useState(s.examDate ?? "")
+  const [bookingAck, setBookingAck] = useState(false)
 
   const day = todayKey(s.timezone)
   const upcoming = snapshot.schedule.filter((r) => r.date >= day && r.status !== "cancelled").length
@@ -97,17 +101,93 @@ export function SettingsView() {
             <Input defaultValue={s.examName} onBlur={(e) => void updateSettings({ examName: e.target.value })} />
           </div>
           <div>
-            <FieldLabel>Exam date (empty until booked)</FieldLabel>
-            <Input
-              type="date"
-              defaultValue={s.examDate ?? ""}
-              onBlur={(e) => void updateSettings({ examDate: e.target.value || null })}
-            />
-          </div>
-          <div>
             <FieldLabel>Timezone</FieldLabel>
             <Input defaultValue={s.timezone} onBlur={(e) => void updateSettings({ timezone: e.target.value })} />
           </div>
+        </div>
+
+        <div className="mt-4 space-y-3 rounded-xl border border-border/70 p-4">
+          <p className="font-medium">Official MCCQE1 licensing exam</p>
+          <p className="text-sm text-muted-foreground">
+            Status:{" "}
+            <strong>
+              {s.examBookedConfirmed && s.examDate ? `Booked — ${s.examDate}` : "Not booked"}
+            </strong>
+            . Practice exam dates (UWorld, ACE, MCCQE1 official practice, ABZI, MCC) belong under Journey → Upcoming
+            Practice Exams and never count as this booking.
+          </p>
+          {s.examDate && !s.examBookedConfirmed ? (
+            <div className="rounded-xl bg-accent/50 px-3 py-2 text-sm">
+              A date is saved on file (<strong>{s.examDate}</strong>) but is <strong>not</strong> treated as your official
+              licensing exam until you confirm. If this was a practice-exam date (for example January 2026), clear it
+              here — assessment history is kept.
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void clearMistakenExamDate().then(() => toast.success("Mistaken exam date cleared"))
+                  }
+                >
+                  Clear mistaken date
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {s.examBookedConfirmed && s.examDate ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  void clearMistakenExamDate().then(() => {
+                    setBookingAck(false)
+                    toast.success("Official booking cleared — status is Not booked")
+                  })
+                }
+              >
+                Clear official booking
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <FieldLabel>Official exam date</FieldLabel>
+                <Input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} />
+              </div>
+              <div className="md:col-span-2 flex items-start gap-2 text-sm">
+                <input
+                  id="official-exam-ack"
+                  type="checkbox"
+                  className="mt-1"
+                  checked={bookingAck}
+                  onChange={(e) => setBookingAck(e.target.checked)}
+                />
+                <label htmlFor="official-exam-ack">
+                  I confirm this date is my official MCCQE1 licensing exam booking (not a practice exam).
+                </label>
+              </div>
+              <div className="md:col-span-2">
+                <Button
+                  size="sm"
+                  disabled={!bookingAck || !bookingDate}
+                  onClick={() => {
+                    if (!bookingAck || !bookingDate) return
+                    void confirmOfficialExamBooking(bookingDate).then(() =>
+                      toast.success("Official MCCQE1 booking confirmed")
+                    )
+                  }}
+                >
+                  Confirm official booking
+                </Button>
+              </div>
+            </div>
+          )}
+          {s.suggestedExamDate ? (
+            <p className="text-xs text-muted-foreground">
+              100-day suggested preparation target on file: {s.suggestedExamDate} (not a booking; managed on Journey).
+            </p>
+          ) : null}
         </div>
       </SettingsFold>
 
