@@ -35,6 +35,7 @@ function running(startAt: string, confirmedThroughAt: string | null = null): Stu
     confidence: null,
     energy: null,
     confirmedThroughAt,
+    pauseLog: [],
     createdAt: startAt,
     updatedAt: startAt,
   }

@@ -1,4 +1,5 @@
 import { dayKey, durationMinutes, todayKey } from "@/lib/dates"
+import { isActiveSession, openPause, studyCreditMinutes } from "@/lib/session-pause"
 import type { Settings, StudySession } from "@/lib/types"
 
 export function warningThresholdHours(settings: Settings) {
@@ -9,29 +10,47 @@ export function confirmThresholdHours(settings: Settings) {
   return settings.confirmSessionHours > 0 ? settings.confirmSessionHours : 4
 }
 
+/** Wall-clock elapsed including breaks (for “you've been away” UX). */
 export function rawElapsedMinutes(
-  session: Pick<StudySession, "startAt" | "endAt">,
+  session: Pick<StudySession, "startAt" | "endAt" | "status" | "pauseLog">,
   now = new Date()
 ) {
+  if (session.status === "paused") {
+    const open = openPause(session)
+    if (open) return durationMinutes(session.startAt, open.pausedAt)
+  }
   const endIso = session.endAt ?? now.toISOString()
   return durationMinutes(session.startAt, endIso)
 }
 
+/**
+ * Credited study minutes excluding pauses.
+ * Running sessions still respect the 4h unconfirmed cap.
+ */
 export function creditedDurationMinutes(
   session: StudySession,
   settings: Settings,
   now = new Date()
 ) {
   if (session.status === "completed") {
-    return session.durationMinutes ?? rawElapsedMinutes(session, now)
+    return studyCreditMinutes(session, now)
   }
-  const raw = rawElapsedMinutes(session, now)
+  const study = studyCreditMinutes(session, now)
+  if (session.status === "paused") return study
   const cap = confirmThresholdHours(settings) * 60
-  if (!session.confirmedThroughAt) return Math.min(raw, cap)
-  const confirmedElapsed = durationMinutes(session.startAt, session.confirmedThroughAt)
-  const sinceConfirm = raw - confirmedElapsed
-  if (sinceConfirm <= cap + 0.01) return raw
-  return confirmedElapsed + cap
+  if (!session.confirmedThroughAt) return Math.min(study, cap)
+  const confirmedStudy = studyCreditMinutes(
+    {
+      ...session,
+      status: "completed",
+      endAt: session.confirmedThroughAt,
+      durationMinutes: null,
+    },
+    new Date(session.confirmedThroughAt)
+  )
+  const sinceConfirm = study - confirmedStudy
+  if (sinceConfirm <= cap + 0.01) return study
+  return confirmedStudy + cap
 }
 
 export function needsConfirmation(
@@ -39,10 +58,11 @@ export function needsConfirmation(
   settings: Settings,
   now = new Date()
 ) {
-  if (!session || session.status !== "running") return false
-  const raw = rawElapsedMinutes(session, now)
+  if (!session || !isActiveSession(session)) return false
+  if (session.status === "paused") return false
+  const study = studyCreditMinutes(session, now)
   const credited = creditedDurationMinutes(session, settings, now)
-  return raw > credited + 0.5
+  return study > credited + 0.5
 }
 
 export function needsWarning(
@@ -52,8 +72,8 @@ export function needsWarning(
 ) {
   if (!session || session.status !== "running") return false
   if (needsConfirmation(session, settings, now)) return false
-  const raw = rawElapsedMinutes(session, now)
-  return raw >= warningThresholdHours(settings) * 60
+  const study = studyCreditMinutes(session, now)
+  return study >= warningThresholdHours(settings) * 60
 }
 
 export function isStaleRunning(
@@ -71,7 +91,8 @@ export function sessionSafetyLabel(
   session: StudySession,
   settings: Settings,
   now = new Date()
-): "Normal" | "Needs Confirmation" | "Confirmed" {
+): "Normal" | "Needs Confirmation" | "Confirmed" | "Paused" {
+  if (session.status === "paused") return "Paused"
   if (session.status === "completed") {
     return session.confirmedThroughAt ? "Confirmed" : "Normal"
   }
