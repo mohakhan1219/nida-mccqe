@@ -1,1 +1,1 @@
-__FROM_FILE__:/workspace/lib/data/filipe-santos-catalog.json
+{"deprecated":true,"note":"Use filipe-santos-catalog-part1.json and part2.json via filipe-santos-catalog.ts","topicCount":578}
