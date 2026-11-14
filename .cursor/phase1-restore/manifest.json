@@ -3,5 +3,10 @@
     "dest": "lib/data/workspace-context.tsx",
     "staging": ".cursor/phase1-restore/workspace.zlib.b64",
     "sha256": "c5a47008268f3e335b4754ea4ef642a0cefed5a38ea5a83b40569da124d60249"
+  },
+  "catalog": {
+    "dest": "lib/data/filipe-santos-catalog.json",
+    "staging": ".cursor/phase1-restore/catalog.zlib.b64",
+    "sha256": "d3fa4d8164970f77b42df00d30cfc5d81f530758dd3467cccd8eec4d95fe4502"
   }
 }
