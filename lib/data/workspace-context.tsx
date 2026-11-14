@@ -631,4 +631,119 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const resumeSession: Ctx["resumeSession"] = async () => {
     const current = runningSession(snapshot)
     if (!current) throw new Error("No active session")
-    const maybeEnded = reconcilePausedSessi
+    const maybeEnded = reconcilePausedSession(current, snapshot.settings)
+    if (maybeEnded.status === "completed") {
+      const next = {
+        ...snapshot,
+        sessions: snapshot.sessions.map((s) => (s.id === maybeEnded.id ? maybeEnded : s)),
+      }
+      await commit(next)
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("study_sessions").update(sessionRow(maybeEnded, snapshot.workspaceId)).eq("id", maybeEnded.id)
+      }
+      throw new Error("This session was auto-ended after 60 minutes paused.")
+    }
+    const updated = withResume(current, nowIso())
+    const next = {
+      ...snapshot,
+      sessions: snapshot.sessions.map((s) => (s.id === updated.id ? updated : s)),
+    }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("study_sessions")
+        .update(sessionRow(updated, snapshot.workspaceId))
+        .eq("id", updated.id)
+      if (err) throw err
+    }
+  }
+
+  const confirmStillStudying: Ctx["confirmStillStudying"] = async () => {
+    const current = runningSession(snapshot)
+    if (!current) return
+    const at = nowIso()
+    const updated: StudySession = {
+      ...current,
+      confirmedThroughAt: at,
+      updatedAt: at,
+    }
+    const next = {
+      ...snapshot,
+      sessions: snapshot.sessions.map((s) => (s.id === updated.id ? updated : s)),
+    }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("study_sessions")
+        .update(sessionRow(updated, snapshot.workspaceId))
+        .eq("id", updated.id)
+      if (err) throw err
+    }
+  }
+
+  const discardRunning: Ctx["discardRunning"] = async () => {
+    const current = runningSession(snapshot)
+    if (!current) return
+    const next = { ...snapshot, sessions: snapshot.sessions.filter((s) => s.id !== current.id) }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("study_sessions").delete().eq("id", current.id)
+    }
+  }
+
+  const saveManualSession: Ctx["saveManualSession"] = async (input) => {
+    if (running) throw new Error("End the live session before saving a manual one.")
+    if (new Date(input.endAt) <= new Date(input.startAt)) {
+      throw new Error("End time must be after start time.")
+    }
+    const row: StudySession = {
+      id: newId(),
+      subjectId: input.subjectId,
+      sourceId: input.sourceId,
+      activityId: input.activityId,
+      topic: input.topic ?? "",
+      startAt: input.startAt,
+      endAt: input.endAt,
+      durationMinutes: durationMinutes(input.startAt, input.endAt),
+      entryMode: "manual",
+      status: "completed",
+      notes: input.notes ?? "",
+      linkedAssessmentId: null,
+      planned: false,
+      confidence: null,
+      energy: null,
+      confirmedThroughAt: input.endAt,
+      pauseLog: [],
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    }
+    const next = { ...snapshot, sessions: [...snapshot.sessions, row] }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase.from("study_sessions").insert(sessionRow(row, snapshot.workspaceId))
+      if (err) throw err
+    }
+  }
+
+  const saveAssessment: Ctx["saveAssessment"] = async (input) => {
+    if (!countsValid(input)) {
+      throw new Error("Correct + Incorrect + Skipped must equal Total questions.")
+    }
+    if (new Date(input.endAt) <= new Date(input.startAt)) {
+      throw new Error("End time must be after start time.")
+    }
+    const duration = durationMinutes(input.startAt, input.endAt)
+    const id = newId()
+    const qPractice = snapshot.catalogs.find((c) => c.slug === "question-practice")
+    let linkedSessionId: string | null = null
+    let sessions = snapshot.sessions
+
+    const current = runningSession(snapshot)
+    if (input.countAsStudySession && !current && qPractice) {
+      const session: StudySession = {
+        id: newId
