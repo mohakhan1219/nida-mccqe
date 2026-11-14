@@ -17,6 +17,8 @@ export function snapshotToBackup(snapshot: WorkspaceSnapshot): BackupFile {
       courses: snapshot.courses,
       schedule: snapshot.schedule,
       quotes: snapshot.quotes,
+      qbankSnapshots: snapshot.qbankSnapshots,
+      highYieldTopics: snapshot.highYieldTopics,
     },
   }
 }
@@ -26,12 +28,18 @@ export function backupToPartial(file: BackupFile): Omit<WorkspaceSnapshot, "prof
   return {
     settings: { ...DEFAULT_SETTINGS, ...s.settings },
     catalogs: s.catalogs?.length ? s.catalogs : DEFAULT_CATALOGS,
-    sessions: s.sessions ?? [],
+    sessions: (s.sessions ?? []).map((row) => ({
+      ...row,
+      pauseLog: Array.isArray(row.pauseLog) ? row.pauseLog : [],
+      status: row.status === "paused" ? "paused" : row.status,
+    })),
     blocks: s.blocks ?? [],
     tests: s.tests ?? [],
     reviews: s.reviews ?? [],
     courses: s.courses?.length ? s.courses : DEFAULT_COURSES,
     schedule: (s.schedule ?? []).map((row) => normalizeScheduleEvent(row)),
     quotes: s.quotes?.length ? s.quotes : defaultQuotes(),
+    qbankSnapshots: s.qbankSnapshots ?? [],
+    highYieldTopics: s.highYieldTopics ?? [],
   }
 }
