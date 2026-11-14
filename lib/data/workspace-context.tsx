@@ -130,3 +130,104 @@ type Ctx = {
   deleteSession: (id: string) => Promise<void>
   updateBlock: (row: QuestionBlock) => Promise<void>
   deleteBlock: (id: string) => Promise<void>
+  updateTest: (row: TestMock) => Promise<void>
+  deleteTest: (id: string) => Promise<void>
+  upsertReview: (row: IncorrectReview) => Promise<void>
+  deleteReview: (id: string) => Promise<void>
+  updateSettings: (patch: Partial<Settings>) => Promise<void>
+  updateCatalogItem: (item: CatalogItem) => Promise<void>
+  addCatalogItem: (item: CatalogItem) => Promise<void>
+  updateCourse: (row: Course) => Promise<void>
+  upsertSchedule: (row: ScheduleEvent) => Promise<void>
+  deleteSchedule: (id: string) => Promise<void>
+  updateQuotes: (quotes: WorkspaceSnapshot["quotes"]) => Promise<void>
+  exportBackup: () => Blob
+  restoreBackup: (file: BackupFile) => Promise<void>
+  signOut: () => Promise<void>
+}
+
+const WorkspaceContext = createContext<Ctx | null>(null)
+
+function mergeSnapshot(raw: Partial<WorkspaceSnapshot> | null): WorkspaceSnapshot {
+  const base = emptySnapshot()
+  if (!raw) return base
+  return {
+    ...base,
+    ...raw,
+    settings: { ...DEFAULT_SETTINGS, ...raw.settings },
+    catalogs: raw.catalogs?.length ? raw.catalogs : DEFAULT_CATALOGS,
+    courses: raw.courses?.length ? raw.courses : DEFAULT_COURSES,
+    quotes: raw.quotes?.length ? raw.quotes : defaultQuotes(),
+    sessions: (raw.sessions ?? []).map((s) => ({
+      ...s,
+      confirmedThroughAt: s.confirmedThroughAt ?? null,
+      pauseLog: Array.isArray(s.pauseLog) ? s.pauseLog : [],
+    })),
+    blocks: raw.blocks ?? [],
+    tests: raw.tests ?? [],
+    reviews: raw.reviews ?? [],
+    schedule: (raw.schedule ?? []).map((row) => normalizeScheduleEvent(row)),
+    qbankSnapshots: raw.qbankSnapshots ?? [],
+    highYieldTopics: (raw.highYieldTopics ?? []).map((t) => ({
+      ...t,
+      catalogKey: t.catalogKey ?? null,
+    })),
+    practiceAssessments: raw.practiceAssessments ?? [],
+  }
+}
+
+export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+  const configured = isSupabaseConfigured()
+  const mode: "cloud" | "preview" = configured ? "cloud" : "preview"
+  const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>(emptySnapshot)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const persistLocal = useCallback((next: WorkspaceSnapshot) => {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(next))
+    setSnapshot(next)
+  }, [])
+
+  const loadLocal = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY)
+      const merged = mergeSnapshot(raw ? JSON.parse(raw) : null)
+      const missingCats = DEFAULT_CATALOGS.filter((c) => !merged.catalogs.some((x) => x.id === c.id))
+      const withCats = missingCats.length
+        ? { ...merged, catalogs: [...merged.catalogs, ...missingCats] }
+        : merged
+      const sessions = withCats.sessions.map((s) => reconcilePausedSession(s, withCats.settings))
+      let settings = withCats.settings
+      const { snapshot: seeded } = applyAbziSeedToSnapshot({ ...withCats, sessions })
+      const planning = computeExamPlanning(seeded, deriveStats(seeded))
+      if (planning.shouldCreateSuggestedTarget && planning.proposedSuggestedDate) {
+        settings = withSuggestedExamTarget(settings, planning.proposedSuggestedDate)
+      }
+      const hy = mergeFilipeSantosCatalog(seeded.highYieldTopics)
+      persistLocal({
+        ...seeded,
+        settings,
+        highYieldTopics: hy.topics,
+        practiceAssessments: seeded.practiceAssessments ?? [],
+      })
+    } catch {
+      const { snapshot: seeded } = applyAbziSeedToSnapshot(emptySnapshot())
+      const hy = mergeFilipeSantosCatalog(seeded.highYieldTopics)
+      persistLocal({
+        ...seeded,
+        highYieldTopics: hy.topics,
+        practiceAssessments: seeded.practiceAssessments ?? [],
+      })
+    }
+  }, [persistLocal])
+
+  const loadCloud = useCallback(async () => {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      setError("Please sign in.")
+      return
+    }
+    const { data: profile, e
