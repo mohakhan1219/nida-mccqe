@@ -68,7 +68,8 @@ export const SOURCES: CatalogItem[] = [
   item("source", "self-study", "Self Study", 5, { sourceKind: "self" }),
   item("source", "canadaqbank", "CanadaQBank", 6, { sourceKind: "qbank" }),
   item("source", "mcc-practice", "MCC Practice", 7, { sourceKind: "qbank" }),
-  item("source", "other", "Other", 8, { sourceKind: "other" }),
+  item("source", "mccqe1-official-practice", "MCCQE1 Official Practice", 8, { sourceKind: "other" }),
+  item("source", "other", "Other", 9, { sourceKind: "other" }),
 ]
 
 export const ACTIVITIES: CatalogItem[] = [
@@ -111,13 +112,17 @@ export const ASSESSMENT_TYPES: CatalogItem[] = [
     countsAsMock: true,
     defaultCountAsStudySession: true,
   }),
-  item("assessment_type", "practice-test", "Practice Test", 7, {
+  item("assessment_type", "mccqe1-official-practice", "MCCQE1 Official Practice Exam", 7, {
+    countsAsMock: true,
     defaultCountAsStudySession: true,
   }),
-  item("assessment_type", "course-test", "Course Test", 8, {
+  item("assessment_type", "practice-test", "Practice Test", 8, {
     defaultCountAsStudySession: true,
   }),
-  item("assessment_type", "other", "Other", 9, {
+  item("assessment_type", "course-test", "Course Test", 9, {
+    defaultCountAsStudySession: true,
+  }),
+  item("assessment_type", "other", "Other", 10, {
     defaultCountAsStudySession: true,
   }),
 ]
@@ -146,6 +151,8 @@ export const DEFAULT_SETTINGS: Settings = {
   studentName: "Dr. Nida",
   examName: "MCCQE1",
   examDate: null,
+  examBookedConfirmed: false,
+  examBookingConfirmedAt: null,
   suggestedExamDate: null,
   suggestedExamCreatedAt: null,
   timezone: "America/Toronto",
@@ -310,6 +317,7 @@ export function emptySnapshot(): import("@/lib/types").WorkspaceSnapshot {
     quotes: defaultQuotes(),
     qbankSnapshots: [],
     highYieldTopics: [],
+    practiceAssessments: [],
   }
 }
 
