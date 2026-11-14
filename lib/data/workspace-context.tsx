@@ -225,7 +225,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient()
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getGetUser()
     if (!user) {
       setError("Please sign in.")
       return
@@ -451,4 +451,50 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       courses,
       settings: nextSettings,
       qbankSnapshots,
-      highYiel
+      highYieldTopics,
+      practiceAssessments,
+    })
+    setError(null)
+  }, [])
+
+  const refresh = useCallback(async () => {
+    if (!configured) {
+      loadLocal()
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    try {
+      await loadCloud()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load workspace")
+    } finally {
+      setLoading(false)
+    }
+  }, [configured, loadCloud, loadLocal])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  useEffect(() => {
+    if (!configured) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel("nida-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "study_sessions" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "question_blocks" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_ch
