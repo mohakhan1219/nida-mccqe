@@ -1438,4 +1438,109 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     updateCatalogItem,
     addCatalogItem,
     updateCourse,
-    upsertSchedule
+    upsertSchedule,
+    deleteSchedule,
+    updateQuotes,
+    exportBackup,
+    restoreBackup,
+    signOut,
+  }
+
+  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
+}
+
+export function useWorkspace() {
+  const ctx = useContext(WorkspaceContext)
+  if (!ctx) throw new Error("useWorkspace must be used within WorkspaceProvider")
+  return ctx
+}
+
+function mapCatalog(row: Record<string, unknown>): CatalogItem {
+  return {
+    id: String(row.id),
+    kind: row.kind as CatalogItem["kind"],
+    slug: String(row.slug),
+    name: String(row.name),
+    active: Boolean(row.active),
+    sortOrder: Number(row.sort_order),
+    meta: (row.meta as CatalogItem["meta"]) ?? {},
+  }
+}
+
+function mapSession(row: Record<string, unknown>): StudySession {
+  const pauseRaw = row.pause_log
+  const pauseLog = Array.isArray(pauseRaw)
+    ? pauseRaw.map((p) => ({
+        pausedAt: String((p as { pausedAt?: string; paused_at?: string }).pausedAt ?? (p as { paused_at?: string }).paused_at ?? ""),
+        resumedAt:
+          (p as { resumedAt?: string | null; resumed_at?: string | null }).resumedAt ??
+          (p as { resumed_at?: string | null }).resumed_at ??
+          null,
+      })).filter((p) => p.pausedAt)
+    : []
+  return {
+    id: String(row.id),
+    subjectId: String(row.subject_id),
+    sourceId: String(row.source_id),
+    activityId: String(row.activity_id),
+    topic: String(row.topic ?? ""),
+    startAt: String(row.start_at),
+    endAt: row.end_at ? String(row.end_at) : null,
+    durationMinutes: row.duration_minutes == null ? null : Number(row.duration_minutes),
+    entryMode: row.entry_mode as StudySession["entryMode"],
+    status: row.status as StudySession["status"],
+    notes: String(row.notes ?? ""),
+    linkedAssessmentId: row.linked_assessment_id ? String(row.linked_assessment_id) : null,
+    planned: Boolean(row.planned),
+    confidence: row.confidence == null ? null : Number(row.confidence),
+    energy: row.energy == null ? null : Number(row.energy),
+    confirmedThroughAt: row.confirmed_through_at ? String(row.confirmed_through_at) : null,
+    pauseLog,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }
+}
+
+function mapQBankSnapshot(row: Record<string, unknown>): QBankSnapshot {
+  return {
+    id: String(row.id),
+    sourceId: String(row.source_id),
+    asOfDate: String(row.as_of_date),
+    totalAvailable: row.total_available == null ? null : Number(row.total_available),
+    used: row.used == null ? null : Number(row.used),
+    unused: row.unused == null ? null : Number(row.unused),
+    correct: row.correct == null ? null : Number(row.correct),
+    incorrect: row.incorrect == null ? null : Number(row.incorrect),
+    skipped: row.skipped == null ? null : Number(row.skipped),
+    notes: String(row.notes ?? ""),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }
+}
+
+function mapHighYieldTopic(row: Record<string, unknown>): HighYieldTopic {
+  return {
+    id: String(row.id),
+    subject: String(row.subject),
+    topic: String(row.topic),
+    priority: row.priority as HighYieldTopic["priority"],
+    status: row.status as HighYieldTopic["status"],
+    notes: String(row.notes ?? ""),
+    source: String(row.source ?? "filipe-santos-mccqe1"),
+    catalogKey: row.catalog_key == null || row.catalog_key === "" ? null : String(row.catalog_key),
+    sortOrder: Number(row.sort_order ?? 0),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }
+}
+
+function mapPracticeAssessment(row: Record<string, unknown>): PracticeAssessment {
+  return {
+    id: String(row.id),
+    provider: row.provider as PracticeAssessment["provider"],
+    title: String(row.title ?? ""),
+    status: row.status as PracticeAssessment["status"],
+    scheduledDate: String(row.scheduled_date),
+    completedDate: row.completed_date ? String(row.completed_date) : null,
+    total: row.total == null ? null : Number(row.total),
+    correct: row.correct == null ? null : Number(row.correc
