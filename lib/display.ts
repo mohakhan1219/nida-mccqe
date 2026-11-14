@@ -33,10 +33,10 @@ export function examTrackLabel(report: ReadinessReport): "On track" | "Attention
 
 export function examCountdownDisplay(report: Pick<ReadinessReport, "examDate" | "countdown">) {
   if (!report.examDate) {
-    return { headline: "Exam not booked yet.", track: null as string | null }
+    return { headline: "Not booked", track: null as string | null }
   }
   if (report.countdown == null) {
-    return { headline: "Exam not booked yet.", track: null as string | null }
+    return { headline: "Not booked", track: null as string | null }
   }
   if (report.countdown < 0) {
     return { headline: "Exam date passed — update exam date.", track: "Attention needed" }
