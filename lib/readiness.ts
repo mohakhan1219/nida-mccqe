@@ -7,6 +7,7 @@ import type {
 import type { DerivedStats, SubjectHealth } from "@/lib/stats"
 import { shrinkAccuracy, volumeFactor } from "@/lib/metrics"
 import { countdownDays, todayKey } from "@/lib/dates"
+import { officialExamDate } from "@/lib/official-exam"
 
 export type ReadinessReport = {
   score: number | null
@@ -265,7 +266,7 @@ export function computeReadiness(
 
   const { why, nextFocus } = explain(state, stats, blockers, enough, s)
 
-  const examDate = s.examDate
+  const examDate = officialExamDate(s)
   const countdown =
     examDate && examDate.length >= 10 ? countdownDays(examDate, s.timezone) : null
 
