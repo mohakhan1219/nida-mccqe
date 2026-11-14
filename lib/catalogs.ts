@@ -61,13 +61,14 @@ export const SUBJECTS: CatalogItem[] = [
 
 export const SOURCES: CatalogItem[] = [
   item("source", "uworld", "UWorld", 0, { sourceKind: "qbank" }),
-  item("source", "abzi", "Abzi", 1, { sourceKind: "course" }),
-  item("source", "toronto-notes", "Toronto Notes", 2, { sourceKind: "course" }),
-  item("source", "medcognito", "Medcognito", 3, { sourceKind: "course" }),
-  item("source", "self-study", "Self Study", 4, { sourceKind: "self" }),
-  item("source", "canadaqbank", "CanadaQBank", 5, { sourceKind: "qbank" }),
-  item("source", "mcc-practice", "MCC Practice", 6, { sourceKind: "qbank" }),
-  item("source", "other", "Other", 7, { sourceKind: "other" }),
+  item("source", "ace-qbank", "ACE QBank", 1, { sourceKind: "qbank" }),
+  item("source", "abzi", "Abzi", 2, { sourceKind: "course" }),
+  item("source", "toronto-notes", "Toronto Notes", 3, { sourceKind: "course" }),
+  item("source", "medcognito", "Medcognito", 4, { sourceKind: "course" }),
+  item("source", "self-study", "Self Study", 5, { sourceKind: "self" }),
+  item("source", "canadaqbank", "CanadaQBank", 6, { sourceKind: "qbank" }),
+  item("source", "mcc-practice", "MCC Practice", 7, { sourceKind: "qbank" }),
+  item("source", "other", "Other", 8, { sourceKind: "other" }),
 ]
 
 export const ACTIVITIES: CatalogItem[] = [
@@ -145,6 +146,8 @@ export const DEFAULT_SETTINGS: Settings = {
   studentName: "Dr. Nida",
   examName: "MCCQE1",
   examDate: null,
+  suggestedExamDate: null,
+  suggestedExamCreatedAt: null,
   timezone: "America/Toronto",
   weekStartsOn: 1,
   dailyHourGoal: 4,
@@ -152,6 +155,7 @@ export const DEFAULT_SETTINGS: Settings = {
   weeklyHourGoal: 24,
   weeklyQuestionGoal: 240,
   accuracyGoal: 0.75,
+  questionAccuracyGoal: 0.72,
   reviewIntervals: [1, 7, 21],
   minQuestionsForSubject: 15,
   minQuestionsForBaseline: 80,
@@ -171,6 +175,12 @@ export const DEFAULT_SETTINGS: Settings = {
   warnSessionHours: 8,
   longSessionWarningHours: 3,
   confirmSessionHours: 4,
+  pauseAutoEndMinutes: 60,
+  suggestedExamHorizonDays: 100,
+  /** Configurable evidence gate for suggested exam target (initial: 4,000). */
+  minEligibleQuestionsForTarget: 4000,
+  minSubjectsForTarget: 6,
+  minMocksForTarget: 1,
   weights: {
     accuracy: 18,
     recentAccuracy: 18,
@@ -298,6 +308,8 @@ export function emptySnapshot(): import("@/lib/types").WorkspaceSnapshot {
     courses: structuredClone(DEFAULT_COURSES),
     schedule: [],
     quotes: defaultQuotes(),
+    qbankSnapshots: [],
+    highYieldTopics: [],
   }
 }
 
