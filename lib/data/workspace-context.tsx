@@ -1179,4 +1179,125 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const supabase = createClient()
       const { error: tErr } = await supabase
         .from("tests_mocks")
-        .upsert(te
+        .upsert(testRow(testRowData, snapshot.workspaceId))
+      if (tErr) throw tErr
+      const { error: pErr } = await supabase
+        .from("practice_assessments")
+        .upsert(practiceAssessmentRow(completed, snapshot.workspaceId))
+      if (pErr) throw pErr
+    }
+  }
+
+  const deletePracticeAssessment: Ctx["deletePracticeAssessment"] = async (id) => {
+    await commit({
+      ...snapshot,
+      practiceAssessments: snapshot.practiceAssessments.filter((t) => t.id !== id),
+    })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("practice_assessments").delete().eq("id", id)
+    }
+  }
+
+  const confirmOfficialExamBooking: Ctx["confirmOfficialExamBooking"] = async (examDate) => {
+    await updateSettings({
+      examDate,
+      examBookedConfirmed: true,
+      examBookingConfirmedAt: nowIso(),
+    })
+  }
+
+  const clearMistakenExamDate: Ctx["clearMistakenExamDate"] = async () => {
+    await updateSettings({
+      examDate: null,
+      examBookedConfirmed: false,
+      examBookingConfirmedAt: null,
+    })
+  }
+
+  const updateCatalogItem: Ctx["updateCatalogItem"] = async (item) => {
+    const catalogs = snapshot.catalogs.map((c) => (c.id === item.id ? item : c))
+    await commit({ ...snapshot, catalogs })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("catalog_items").upsert({
+        workspace_id: snapshot.workspaceId,
+        id: item.id,
+        kind: item.kind,
+        slug: item.slug,
+        name: item.name,
+        active: item.active,
+        sort_order: item.sortOrder,
+        meta: item.meta,
+      })
+    }
+  }
+
+  const addCatalogItem: Ctx["addCatalogItem"] = async (item) => {
+    const catalogs = [...snapshot.catalogs, item]
+    await commit({ ...snapshot, catalogs })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("catalog_items").insert({
+        workspace_id: snapshot.workspaceId,
+        id: item.id,
+        kind: item.kind,
+        slug: item.slug,
+        name: item.name,
+        active: item.active,
+        sort_order: item.sortOrder,
+        meta: item.meta,
+      })
+    }
+  }
+
+  const updateCourse: Ctx["updateCourse"] = async (row) => {
+    const courses = snapshot.courses.map((c) => (c.id === row.id ? row : c))
+    await commit({ ...snapshot, courses })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("courses").upsert({
+        workspace_id: snapshot.workspaceId,
+        id: row.id,
+        slug: row.id.replace("course:", ""),
+        name: row.name,
+        type: row.type,
+        start_date: row.startDate,
+        target_end_date: row.targetEndDate,
+        total_units: row.totalUnits,
+        completed_units: row.completedUnits,
+        total_questions: row.totalQuestions,
+        completed_questions: row.completedQuestions,
+        current_subject_id: row.currentSubjectId,
+        status: row.status,
+        notes: row.notes,
+      })
+    }
+  }
+
+  const upsertSchedule: Ctx["upsertSchedule"] = async (row) => {
+    const normalized = normalizeScheduleEvent(row)
+    const exists = snapshot.schedule.some((s) => s.id === normalized.id)
+    const schedule = exists
+      ? snapshot.schedule.map((s) => (s.id === normalized.id ? normalized : s))
+      : [...snapshot.schedule, normalized]
+    await commit({ ...snapshot, schedule })
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase.from("schedule_events").upsert(scheduleRow(normalized, snapshot.workspaceId))
+      if (err) throw err
+    }
+  }
+
+  const deleteSchedule: Ctx["deleteSchedule"] = async (id) => {
+    await commit({ ...snapshot, schedule: snapshot.schedule.filter((s) => s.id !== id) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("schedule_events").delete().eq("id", id)
+    }
+  }
+
+  const updateQuotes: Ctx["updateQuotes"] = async (quotes) => {
+    await commit({ ...snapshot, quotes })
+    if (configured) {
+      const supabase = 
