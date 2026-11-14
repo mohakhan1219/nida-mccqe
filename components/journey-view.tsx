@@ -1,1 +1,1 @@
-PLACEHOLDER_LOAD_FROM_WORKSPACE
+$file:/workspace/components/journey-view.tsx
