@@ -897,4 +897,63 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   async function writeSession(row: StudySession, del = false) {
     if (!configured) return
     const supabase = createClient()
-    if (del) await supabase.from("study_sessions").delete().eq("id", row.
+    if (del) await supabase.from("study_sessions").delete().eq("id", row.id)
+    else await supabase.from("study_sessions").upsert(sessionRow(row, snapshot.workspaceId))
+  }
+
+  const updateSession: Ctx["updateSession"] = async (row) => {
+    if (row.endAt && row.startAt && row.status === "completed") {
+      row = {
+        ...row,
+        pauseLog: Array.isArray(row.pauseLog) ? row.pauseLog : [],
+        durationMinutes: studyCreditMinutes({
+          ...row,
+          status: "completed",
+          durationMinutes: null,
+        }),
+        confirmedThroughAt: row.endAt,
+        updatedAt: nowIso(),
+      }
+    } else {
+      row = { ...row, pauseLog: Array.isArray(row.pauseLog) ? row.pauseLog : [], updatedAt: nowIso() }
+    }
+    await commit({
+      ...snapshot,
+      sessions: snapshot.sessions.map((s) => (s.id === row.id ? row : s)),
+    })
+    await writeSession(row)
+  }
+
+  const deleteSession: Ctx["deleteSession"] = async (id) => {
+    const row = snapshot.sessions.find((s) => s.id === id)
+    await commit({ ...snapshot, sessions: snapshot.sessions.filter((s) => s.id !== id) })
+    if (row) await writeSession(row, true)
+  }
+
+  const updateBlock: Ctx["updateBlock"] = async (row) => {
+    if (!countsValid(row)) throw new Error("Correct + Incorrect + Skipped must equal Total.")
+    row = {
+      ...row,
+      durationMinutes: durationMinutes(row.startAt, row.endAt),
+      updatedAt: nowIso(),
+    }
+    await commit({
+      ...snapshot,
+      blocks: snapshot.blocks.map((s) => (s.id === row.id ? row : s)),
+    })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("question_blocks").upsert(blockRow(row, snapshot.workspaceId))
+    }
+  }
+
+  const deleteBlock: Ctx["deleteBlock"] = async (id) => {
+    await commit({ ...snapshot, blocks: snapshot.blocks.filter((s) => s.id !== id) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("question_blocks").delete().eq("id", id)
+    }
+  }
+
+  const updateTest: Ctx["updateTest"] = async (row) => {
+    if (!countsValid(row)) thro
