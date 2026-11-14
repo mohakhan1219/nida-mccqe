@@ -1,5 +1,6 @@
 import meta from "@/lib/data/filipe-santos-catalog-meta.json"
 import part1 from "@/lib/data/filipe-santos-catalog-part1.json"
+import part1b from "@/lib/data/filipe-santos-catalog-part1b.json"
 import part2 from "@/lib/data/filipe-santos-catalog-part2.json"
 
 export const FILIPE_SANTOS_CATALOG_META = meta as {
@@ -7,7 +8,7 @@ export const FILIPE_SANTOS_CATALOG_META = meta as {
   title: string
 }
 
-export const FILIPE_SANTOS_CATALOG_TOPICS = [...part1, ...part2] as Array<{
+export const FILIPE_SANTOS_CATALOG_TOPICS = [...part1, ...part1b, ...part2] as Array<{
   subject: string
   topic: string
   priority: "very_high" | "high" | "medium" | "low"
