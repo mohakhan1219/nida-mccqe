@@ -225,7 +225,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient()
     const {
       data: { user },
-    } = await supabase.auth.getGetUser()
+    } = await supabase.auth.getUser()
     if (!user) {
       setError("Please sign in.")
       return
