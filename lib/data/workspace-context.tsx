@@ -721,4 +721,63 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       createdAt: nowIso(),
       updatedAt: nowIso(),
     }
-    const next = { ...snapshot, ses
+    const next = { ...snapshot, sessions: [...snapshot.sessions, row] }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase.from("study_sessions").insert(sessionRow(row, snapshot.workspaceId))
+      if (err) throw err
+    }
+  }
+
+  const saveAssessment: Ctx["saveAssessment"] = async (input) => {
+    if (!countsValid(input)) {
+      throw new Error("Correct + Incorrect + Skipped must equal Total questions.")
+    }
+    if (new Date(input.endAt) <= new Date(input.startAt)) {
+      throw new Error("End time must be after start time.")
+    }
+    const duration = durationMinutes(input.startAt, input.endAt)
+    const id = newId()
+    const qPractice = snapshot.catalogs.find((c) => c.slug === "question-practice")
+    let linkedSessionId: string | null = null
+    let sessions = snapshot.sessions
+
+    const current = runningSession(snapshot)
+    if (input.countAsStudySession && !current && qPractice) {
+      const session: StudySession = {
+        id: newId(),
+        subjectId: input.subjectId,
+        sourceId: input.sourceId,
+        activityId: qPractice.id,
+        topic: input.topic ?? "",
+        startAt: input.startAt,
+        endAt: input.endAt,
+        durationMinutes: duration,
+        entryMode: "manual",
+        status: "completed",
+        notes: "",
+        linkedAssessmentId: id,
+        planned: false,
+        confidence: null,
+        energy: null,
+        confirmedThroughAt: input.endAt,
+        pauseLog: [],
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      linkedSessionId = session.id
+      sessions = [...sessions, session]
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("study_sessions").insert(sessionRow(session, snapshot.workspaceId))
+      }
+    }
+
+    let blocks = snapshot.blocks
+    let tests = snapshot.tests
+    if (input.kind === "test") {
+      const row: TestMock = {
+        id,
+        subjectId: input.subjectId,
+        sourceId: input.sour
