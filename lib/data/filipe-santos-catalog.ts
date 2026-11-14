@@ -1,24 +1,17 @@
-import catalog from "@/lib/data/filipe-santos-catalog.json"
-import type { HighYieldPriority } from "@/lib/types"
+import meta from "@/lib/data/filipe-santos-catalog-meta.json"
+import part1 from "@/lib/data/filipe-santos-catalog-part1.json"
+import part2 from "@/lib/data/filipe-santos-catalog-part2.json"
 
-export type FilipeSantosCatalogTopic = {
+export const FILIPE_SANTOS_CATALOG_META = meta as {
+  source: string
+  title: string
+}
+
+export const FILIPE_SANTOS_CATALOG_TOPICS = [...part1, ...part2] as Array<{
   subject: string
   topic: string
-  priority: HighYieldPriority
+  priority: "very_high" | "high" | "medium" | "low"
   sortOrder: number
   catalogKey: string
-  meta: {
-    allotment: string
-    pages: number
-    volume: string
-    discipline: string
-  }
-}
-
-export const FILIPE_SANTOS_CATALOG_META = {
-  source: catalog.source as string,
-  title: catalog.title as string,
-  topicCount: (catalog.topics as FilipeSantosCatalogTopic[]).length,
-}
-
-export const FILIPE_SANTOS_CATALOG_TOPICS = catalog.topics as FilipeSantosCatalogTopic[]
+  meta?: Record<string, unknown>
+}>
