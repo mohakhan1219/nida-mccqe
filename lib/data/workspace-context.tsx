@@ -746,4 +746,128 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const current = runningSession(snapshot)
     if (input.countAsStudySession && !current && qPractice) {
       const session: StudySession = {
-        id: newId
+        id: newId(),
+        subjectId: input.subjectId,
+        sourceId: input.sourceId,
+        activityId: qPractice.id,
+        topic: input.topic ?? "",
+        startAt: input.startAt,
+        endAt: input.endAt,
+        durationMinutes: duration,
+        entryMode: "manual",
+        status: "completed",
+        notes: "",
+        linkedAssessmentId: id,
+        planned: false,
+        confidence: null,
+        energy: null,
+        confirmedThroughAt: input.endAt,
+        pauseLog: [],
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      linkedSessionId = session.id
+      sessions = [...sessions, session]
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("study_sessions").insert(sessionRow(session, snapshot.workspaceId))
+      }
+    }
+
+    let blocks = snapshot.blocks
+    let tests = snapshot.tests
+    if (input.kind === "test") {
+      const row: TestMock = {
+        id,
+        subjectId: input.subjectId,
+        sourceId: input.sourceId,
+        assessmentTypeId: input.assessmentTypeId,
+        testName: input.testName ?? "",
+        startAt: input.startAt,
+        endAt: input.endAt,
+        durationMinutes: duration,
+        total: input.total,
+        correct: input.correct,
+        incorrect: input.incorrect,
+        skipped: input.skipped,
+        rank: "",
+        strongAreas: "",
+        weakAreas: "",
+        reviewCompleted: false,
+        notes: input.notes ?? "",
+        linkedSessionId,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      tests = [...tests, row]
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("tests_mocks").insert(testRow(row, snapshot.workspaceId))
+      }
+    } else {
+      const row: QuestionBlock = {
+        id,
+        subjectId: input.subjectId,
+        sourceId: input.sourceId,
+        assessmentTypeId: input.assessmentTypeId,
+        topic: input.topic ?? "",
+        startAt: input.startAt,
+        endAt: input.endAt,
+        durationMinutes: duration,
+        total: input.total,
+        correct: input.correct,
+        incorrect: input.incorrect,
+        skipped: input.skipped,
+        timedMode: input.timedMode ?? "timed",
+        attemptState: input.attemptState ?? "first_pass",
+        notes: input.notes ?? "",
+        linkedSessionId,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      blocks = [...blocks, row]
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("question_blocks").insert(blockRow(row, snapshot.workspaceId))
+      }
+    }
+
+    let reviews = snapshot.reviews
+    if (input.sendIncorrectsToReview && input.incorrect > 0) {
+      const [d1, d7, d21] = snapshot.settings.reviewIntervals
+      const start = input.endAt.slice(0, 10)
+      const add = (days: number) => {
+        const dt = new Date(`${start}T12:00:00Z`)
+        dt.setUTCDate(dt.getUTCDate() + days)
+        return dt.toISOString().slice(0, 10)
+      }
+      const errorType =
+        snapshot.catalogs.find((c) => c.kind === "error_type" && c.slug === "knowledge-gap")?.id ??
+        snapshot.catalogs.find((c) => c.kind === "error_type")?.id ??
+        "error_type:other"
+      const review: IncorrectReview = {
+        id: newId(),
+        sourceKind: input.kind === "test" ? "test" : "block",
+        sourceId: id,
+        subjectId: input.subjectId,
+        providerId: input.sourceId,
+        topic: input.topic ?? "",
+        questionCount: input.incorrect,
+        errorTypeId: errorType,
+        reason: "",
+        correctConcept: "",
+        priority: "high",
+        status: "pending",
+        firstReviewAt: add(d1),
+        secondReviewAt: add(d7),
+        thirdReviewAt: add(d21),
+        tutorQuestion: "",
+        flashcardCreated: false,
+        notes: "",
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      reviews = [...reviews, review]
+      if (configured) {
+        const supabase = createClient()
+        await supaba
