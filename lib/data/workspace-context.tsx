@@ -1,1 +1,1 @@
-@file:/tmp/ws-content-a.txt
+$file:/workspace/lib/data/workspace-context.tsx
