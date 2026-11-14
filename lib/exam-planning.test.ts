@@ -6,9 +6,22 @@ import type { QuestionBlock, TestMock, WorkspaceSnapshot } from "@/lib/types"
 
 describe("exam countdown copy", () => {
   it("never shows a negative countdown as on track", () => {
-    expect(examCountdownCopy(null, null).copy).toBe("Exam not booked yet.")
+    expect(examCountdownCopy(null, null).copy).toBe("Not booked")
     expect(examCountdownCopy("2025-01-01", -301).copy).toBe("Exam date passed — update exam date.")
     expect(examCountdownCopy("2027-01-01", 40).copy).toBe("40 days remaining")
+  })
+
+  it("does not treat an unconfirmed examDate as booked", () => {
+    const snap = emptySnapshot()
+    snap.settings = {
+      ...DEFAULT_SETTINGS,
+      examDate: "2026-01-16",
+      examBookedConfirmed: false,
+      suggestedExamDate: null,
+    }
+    const report = computeExamPlanning(snap, deriveStats(snap), null)
+    expect(report.bookedExamDate).toBeNull()
+    expect(report.state).not.toBe("exam_booked")
   })
 })
 

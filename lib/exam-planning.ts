@@ -1,4 +1,5 @@
 import { addDaysKey, todayKey } from "@/lib/dates"
+import { officialExamDate } from "@/lib/official-exam"
 import { computeEligibleQuestionPerformance } from "@/lib/question-performance"
 import type { ExamPlanningState, Settings, WorkspaceSnapshot } from "@/lib/types"
 import type { DerivedStats } from "@/lib/stats"
@@ -23,8 +24,8 @@ export function examCountdownCopy(
   examDate: string | null,
   days: number | null
 ): { copy: string; days: number | null } {
-  if (!examDate) return { copy: "Exam not booked yet.", days: null }
-  if (days == null) return { copy: "Exam not booked yet.", days: null }
+  if (!examDate) return { copy: "Not booked", days: null }
+  if (days == null) return { copy: "Not booked", days: null }
   if (days < 0) return { copy: "Exam date passed — update exam date.", days }
   if (days === 0) return { copy: "Exam is today.", days }
   return { copy: `${days} day${days === 1 ? "" : "s"} remaining`, days }
@@ -51,7 +52,7 @@ export function computeExamPlanning(
   countdown: number | null = null
 ): ExamPlanningReport {
   const settings = snapshot.settings
-  const booked = settings.examDate
+  const booked = officialExamDate(settings)
   const suggested = settings.suggestedExamDate
   const perf = computeEligibleQuestionPerformance(snapshot, settings)
   const subjectsWithData = stats.subjects.filter(
