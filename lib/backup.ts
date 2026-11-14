@@ -19,6 +19,7 @@ export function snapshotToBackup(snapshot: WorkspaceSnapshot): BackupFile {
       quotes: snapshot.quotes,
       qbankSnapshots: snapshot.qbankSnapshots,
       highYieldTopics: snapshot.highYieldTopics,
+      practiceAssessments: snapshot.practiceAssessments,
     },
   }
 }
@@ -40,6 +41,10 @@ export function backupToPartial(file: BackupFile): Omit<WorkspaceSnapshot, "prof
     schedule: (s.schedule ?? []).map((row) => normalizeScheduleEvent(row)),
     quotes: s.quotes?.length ? s.quotes : defaultQuotes(),
     qbankSnapshots: s.qbankSnapshots ?? [],
-    highYieldTopics: s.highYieldTopics ?? [],
+    highYieldTopics: (s.highYieldTopics ?? []).map((t) => ({
+      ...t,
+      catalogKey: t.catalogKey ?? null,
+    })),
+    practiceAssessments: s.practiceAssessments ?? [],
   }
 }
