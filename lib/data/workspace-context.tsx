@@ -497,4 +497,138 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }
       )
       .on(
-        "postgres_ch
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tests_mocks" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "incorrect_reviews" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "settings" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "schedule_events" },
+        () => {
+          void loadCloud()
+        }
+      )
+      .subscribe()
+    const onFocus = () => {
+      void loadCloud()
+    }
+    window.addEventListener("focus", onFocus)
+    return () => {
+      void supabase.removeChannel(channel)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [configured, loadCloud])
+
+  const commit = useCallback(
+    async (next: WorkspaceSnapshot) => {
+      if (!configured) {
+        persistLocal(next)
+        return
+      }
+      setSnapshot(next)
+    },
+    [configured, persistLocal]
+  )
+
+  const stats = useMemo(() => deriveStats(snapshot), [snapshot])
+  const readiness = useMemo(() => computeReadiness(snapshot, stats), [snapshot, stats])
+  const running = runningSession(snapshot)
+
+  const punchIn: Ctx["punchIn"] = async (input) => {
+    if (running) throw new Error("A session is already active. End it first.")
+    const row: StudySession = {
+      id: newId(),
+      subjectId: input.subjectId,
+      sourceId: input.sourceId,
+      activityId: input.activityId,
+      topic: input.topic ?? "",
+      startAt: nowIso(),
+      endAt: null,
+      durationMinutes: null,
+      entryMode: "timer",
+      status: "running",
+      notes: "",
+      linkedAssessmentId: null,
+      planned: false,
+      confidence: null,
+      energy: null,
+      confirmedThroughAt: null,
+      pauseLog: [],
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    }
+    const next = { ...snapshot, sessions: [...snapshot.sessions, row] }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase.from("study_sessions").insert(sessionRow(row, snapshot.workspaceId))
+      if (err) {
+        await loadCloud()
+        throw err
+      }
+    }
+  }
+
+  const punchOut: Ctx["punchOut"] = async (input) => {
+    const current = runningSession(snapshot)
+    if (!current) throw new Error("No active session")
+    const endAt = input?.endAt ?? nowIso()
+    const updated = withSessionEnded(current, endAt, {
+      notes: input?.notes ?? current.notes,
+      topic: input?.topic ?? current.topic,
+    })
+    const next = {
+      ...snapshot,
+      sessions: snapshot.sessions.map((s) => (s.id === updated.id ? updated : s)),
+    }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("study_sessions")
+        .update(sessionRow(updated, snapshot.workspaceId))
+        .eq("id", updated.id)
+      if (err) throw err
+    }
+  }
+
+  const pauseSession: Ctx["pauseSession"] = async () => {
+    const current = runningSession(snapshot)
+    if (!current) throw new Error("No active session")
+    if (current.status === "paused") throw new Error("Session is already paused.")
+    const updated = withPauseStarted(current, nowIso())
+    const next = {
+      ...snapshot,
+      sessions: snapshot.sessions.map((s) => (s.id === updated.id ? updated : s)),
+    }
+    await commit(next)
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("study_sessions")
+        .update(sessionRow(updated, snapshot.workspaceId))
+        .eq("id", updated.id)
+      if (err) throw err
+    }
+  }
+
+  const resumeSession: Ctx["resumeSession"] = async () => {
+    const current = runningSession(snapshot)
+    if (!current) throw new Error("No active session")
+    const maybeEnded = reconcilePausedSessi
