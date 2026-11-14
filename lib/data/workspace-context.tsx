@@ -841,4 +841,60 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         dt.setUTCDate(dt.getUTCDate() + days)
         return dt.toISOString().slice(0, 10)
       }
-      con
+      const errorType =
+        snapshot.catalogs.find((c) => c.kind === "error_type" && c.slug === "knowledge-gap")?.id ??
+        snapshot.catalogs.find((c) => c.kind === "error_type")?.id ??
+        "error_type:other"
+      const review: IncorrectReview = {
+        id: newId(),
+        sourceKind: input.kind === "test" ? "test" : "block",
+        sourceId: id,
+        subjectId: input.subjectId,
+        providerId: input.sourceId,
+        topic: input.topic ?? "",
+        questionCount: input.incorrect,
+        errorTypeId: errorType,
+        reason: "",
+        correctConcept: "",
+        priority: "high",
+        status: "pending",
+        firstReviewAt: add(d1),
+        secondReviewAt: add(d7),
+        thirdReviewAt: add(d21),
+        tutorQuestion: "",
+        flashcardCreated: false,
+        notes: "",
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      reviews = [...reviews, review]
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("incorrect_reviews").insert(reviewRow(review, snapshot.workspaceId))
+      }
+    }
+
+    let schedule = snapshot.schedule
+    if (input.scheduleEventId) {
+      const event = schedule.find((s) => s.id === input.scheduleEventId)
+      if (event && !event.linkedAssessmentId) {
+        const linked = normalizeScheduleEvent({
+          ...event,
+          linkedAssessmentId: id,
+          attendance: event.attendance ?? "attended",
+        })
+        schedule = schedule.map((s) => (s.id === linked.id ? linked : s))
+        if (configured) {
+          const supabase = createClient()
+          await supabase.from("schedule_events").upsert(scheduleRow(linked, snapshot.workspaceId))
+        }
+      }
+    }
+
+    await commit({ ...snapshot, sessions, blocks, tests, reviews, schedule })
+  }
+
+  async function writeSession(row: StudySession, del = false) {
+    if (!configured) return
+    const supabase = createClient()
+    if (del) await supabase.from("study_sessions").delete().eq("id", row.
