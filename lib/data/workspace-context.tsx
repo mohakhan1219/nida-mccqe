@@ -1,1 +1,1 @@
-PLACEHOLDER
+LOAD_FROM:/tmp/cuf_full_ready.json
