@@ -780,4 +780,65 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const row: TestMock = {
         id,
         subjectId: input.subjectId,
-        sourceId: input.sour
+        sourceId: input.sourceId,
+        assessmentTypeId: input.assessmentTypeId,
+        testName: input.testName ?? "",
+        startAt: input.startAt,
+        endAt: input.endAt,
+        durationMinutes: duration,
+        total: input.total,
+        correct: input.correct,
+        incorrect: input.incorrect,
+        skipped: input.skipped,
+        rank: "",
+        strongAreas: "",
+        weakAreas: "",
+        reviewCompleted: false,
+        notes: input.notes ?? "",
+        linkedSessionId,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      tests = [...tests, row]
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("tests_mocks").insert(testRow(row, snapshot.workspaceId))
+      }
+    } else {
+      const row: QuestionBlock = {
+        id,
+        subjectId: input.subjectId,
+        sourceId: input.sourceId,
+        assessmentTypeId: input.assessmentTypeId,
+        topic: input.topic ?? "",
+        startAt: input.startAt,
+        endAt: input.endAt,
+        durationMinutes: duration,
+        total: input.total,
+        correct: input.correct,
+        incorrect: input.incorrect,
+        skipped: input.skipped,
+        timedMode: input.timedMode ?? "timed",
+        attemptState: input.attemptState ?? "first_pass",
+        notes: input.notes ?? "",
+        linkedSessionId,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      }
+      blocks = [...blocks, row]
+      if (configured) {
+        const supabase = createClient()
+        await supabase.from("question_blocks").insert(blockRow(row, snapshot.workspaceId))
+      }
+    }
+
+    let reviews = snapshot.reviews
+    if (input.sendIncorrectsToReview && input.incorrect > 0) {
+      const [d1, d7, d21] = snapshot.settings.reviewIntervals
+      const start = input.endAt.slice(0, 10)
+      const add = (days: number) => {
+        const dt = new Date(`${start}T12:00:00Z`)
+        dt.setUTCDate(dt.getUTCDate() + days)
+        return dt.toISOString().slice(0, 10)
+      }
+      con
