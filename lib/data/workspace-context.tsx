@@ -870,4 +870,111 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       reviews = [...reviews, review]
       if (configured) {
         const supabase = createClient()
-        await supaba
+        await supabase.from("incorrect_reviews").insert(reviewRow(review, snapshot.workspaceId))
+      }
+    }
+
+    let schedule = snapshot.schedule
+    if (input.scheduleEventId) {
+      const event = schedule.find((s) => s.id === input.scheduleEventId)
+      if (event && !event.linkedAssessmentId) {
+        const linked = normalizeScheduleEvent({
+          ...event,
+          linkedAssessmentId: id,
+          attendance: event.attendance ?? "attended",
+        })
+        schedule = schedule.map((s) => (s.id === linked.id ? linked : s))
+        if (configured) {
+          const supabase = createClient()
+          await supabase.from("schedule_events").upsert(scheduleRow(linked, snapshot.workspaceId))
+        }
+      }
+    }
+
+    await commit({ ...snapshot, sessions, blocks, tests, reviews, schedule })
+  }
+
+  async function writeSession(row: StudySession, del = false) {
+    if (!configured) return
+    const supabase = createClient()
+    if (del) await supabase.from("study_sessions").delete().eq("id", row.id)
+    else await supabase.from("study_sessions").upsert(sessionRow(row, snapshot.workspaceId))
+  }
+
+  const updateSession: Ctx["updateSession"] = async (row) => {
+    if (row.endAt && row.startAt && row.status === "completed") {
+      row = {
+        ...row,
+        pauseLog: Array.isArray(row.pauseLog) ? row.pauseLog : [],
+        durationMinutes: studyCreditMinutes({
+          ...row,
+          status: "completed",
+          durationMinutes: null,
+        }),
+        confirmedThroughAt: row.endAt,
+        updatedAt: nowIso(),
+      }
+    } else {
+      row = { ...row, pauseLog: Array.isArray(row.pauseLog) ? row.pauseLog : [], updatedAt: nowIso() }
+    }
+    await commit({
+      ...snapshot,
+      sessions: snapshot.sessions.map((s) => (s.id === row.id ? row : s)),
+    })
+    await writeSession(row)
+  }
+
+  const deleteSession: Ctx["deleteSession"] = async (id) => {
+    const row = snapshot.sessions.find((s) => s.id === id)
+    await commit({ ...snapshot, sessions: snapshot.sessions.filter((s) => s.id !== id) })
+    if (row) await writeSession(row, true)
+  }
+
+  const updateBlock: Ctx["updateBlock"] = async (row) => {
+    if (!countsValid(row)) throw new Error("Correct + Incorrect + Skipped must equal Total.")
+    row = {
+      ...row,
+      durationMinutes: durationMinutes(row.startAt, row.endAt),
+      updatedAt: nowIso(),
+    }
+    await commit({
+      ...snapshot,
+      blocks: snapshot.blocks.map((s) => (s.id === row.id ? row : s)),
+    })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("question_blocks").upsert(blockRow(row, snapshot.workspaceId))
+    }
+  }
+
+  const deleteBlock: Ctx["deleteBlock"] = async (id) => {
+    await commit({ ...snapshot, blocks: snapshot.blocks.filter((s) => s.id !== id) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("question_blocks").delete().eq("id", id)
+    }
+  }
+
+  const updateTest: Ctx["updateTest"] = async (row) => {
+    if (!countsValid(row)) throw new Error("Correct + Incorrect + Skipped must equal Total.")
+    row = { ...row, durationMinutes: durationMinutes(row.startAt, row.endAt), updatedAt: nowIso() }
+    await commit({ ...snapshot, tests: snapshot.tests.map((s) => (s.id === row.id ? row : s)) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("tests_mocks").upsert(testRow(row, snapshot.workspaceId))
+    }
+  }
+
+  const deleteTest: Ctx["deleteTest"] = async (id) => {
+    await commit({ ...snapshot, tests: snapshot.tests.filter((s) => s.id !== id) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("tests_mocks").delete().eq("id", id)
+    }
+  }
+
+  const upsertReview: Ctx["upsertReview"] = async (row) => {
+    const exists = snapshot.reviews.some((r) => r.id === row.id)
+    const reviews = exists
+      ? snapshot.reviews.map((r) => (r.id === row.id ? { ...row, updatedAt: nowIso() } : r))
+      : [...snapshot.reviews, { ...row, createdAt: row.createdAt 
