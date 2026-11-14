@@ -76,13 +76,14 @@ function SessionRow({ row, tz }: { row: StudySession; tz: string }) {
   const [startLocal, setStartLocal] = useState(toDatetimeLocalValue(row.startAt))
   const [endLocal, setEndLocal] = useState(row.endAt ? toDatetimeLocalValue(row.endAt) : "")
   const end = row.endAt ? stamp(row.endAt, tz, true).split(" · ")[1] : "live"
-  const live = row.status === "running" || !row.endAt
+  const live = row.status === "running" || row.status === "paused" || !row.endAt
   return (
     <article className="soft-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium">
             {catalogName(snapshot, row.subjectId)} · {catalogName(snapshot, row.sourceId)}
+            {row.status === "paused" ? " · Paused" : ""}
           </p>
           <p className="text-sm text-muted-foreground">
             {stamp(row.startAt, tz, true)}

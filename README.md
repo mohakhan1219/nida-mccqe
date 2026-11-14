@@ -8,8 +8,8 @@ Nida opens the app on her iPhone, iPad, or laptop, logs a session in about a min
 
 ## What this is
 
-- **Today** — Start Session / End Session (or manual times), optional question/test logging, and the ABZI course card (next class/test + this week)
-- **Journey** — executive readiness, weekly targets, recommended focus, subject board, and ABZI course progress (33-event calendar)
+- **Today** — Start / Pause / Resume / End Session (or manual times), optional question/test logging, and the ABZI course card (next class/test + this week)
+- **Journey** — progress, QBank snapshots, subject health, exam planning (72% benchmark + optional 100-day suggested target), high-yield tracker, 30/60/90 review, ABZI course progress
 - **Review** — incorrect-review queue with 1 / 7 / 21 day intervals
 - **History** — edit or delete any record; calculations update immediately
 - **Settings** — catalogs, targets, readiness weights, courses, editable ABZI/Felipe schedule, exam date, backup
@@ -47,7 +47,12 @@ Nida must not depend on this computer or Cursor. Deploy to **Vercel** and store 
 5. Authentication → Users → add Nida’s email and a password (role: primary is assigned automatically for the first user).
 6. For a later household/admin login, create a second Auth user, then insert a `profiles` row with `role = 'admin'` and the same `workspace_id`.
 
-**Existing production DBs** (schema already applied once): also run the additive migration [`supabase/migrations/20260923_abzi_schedule.sql`](supabase/migrations/20260923_abzi_schedule.sql) in the SQL editor before deploying the ABZI schedule feature. It only adds columns/indexes — it does not delete data. After deploy, the app inserts the 33 ABZI events once per workspace (idempotent by `external_id`) and will not overwrite edited times or notes.
+**Existing production DBs** (schema already applied once):
+
+1. ABZI schedule (already applied in prod): [`supabase/migrations/20260923_abzi_schedule.sql`](supabase/migrations/20260923_abzi_schedule.sql)
+2. **Phase 1 enhancements** (apply manually after approval, before deploying Phase 1 code): [`supabase/migrations/20261113_phase1_enhancements.sql`](supabase/migrations/20261113_phase1_enhancements.sql)
+
+These migrations only add columns/tables/indexes — they do not delete data. After deploy, the app inserts the 33 ABZI events once per workspace (idempotent by `external_id`) and will not overwrite edited times or notes.
 
 Copy the project URL and anon key into Vercel env vars:
 
