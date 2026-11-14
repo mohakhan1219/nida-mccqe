@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   evidenceBandLabel,
+  examCountdownDisplay,
+  examTrackLabel,
   formatLastActivity,
   goalCountCopy,
   goalHoursCopy,
@@ -13,6 +15,7 @@ import {
   warmCopy,
   weeklyGoalsHeadline,
 } from "@/lib/display"
+import type { ReadinessReport } from "@/lib/readiness"
 
 describe("readiness display gating", () => {
   it("hides a numeric score while the baseline is still forming", () => {
@@ -96,5 +99,20 @@ describe("settings and subject-health labels", () => {
     expect(warmCopy("Keep logging honest sessions. Mock exams can wait until volume is more stable.")).toBe(
       "Keep building your study record. Mock exams can wait until volume is more stable."
     )
+  })
+})
+
+describe("exam countdown display", () => {
+  it("never shows a negative countdown as On track", () => {
+    expect(examCountdownDisplay({ examDate: null, countdown: null }).headline).toBe("Exam not booked yet.")
+    expect(examCountdownDisplay({ examDate: "2025-01-01", countdown: -301 }).headline).toBe(
+      "Exam date passed — update exam date."
+    )
+    const past: Pick<ReadinessReport, "examDate" | "countdown" | "state"> = {
+      examDate: "2025-01-01",
+      countdown: -301,
+      state: "getting_close",
+    }
+    expect(examTrackLabel(past as ReadinessReport)).toBe("Attention needed")
   })
 })

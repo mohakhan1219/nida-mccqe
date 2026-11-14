@@ -26,8 +26,28 @@ export function overallStageLabel(
 
 export function examTrackLabel(report: ReadinessReport): "On track" | "Attention needed" | null {
   if (!report.examDate) return null
+  if (report.countdown != null && report.countdown < 0) return "Attention needed"
   if (report.state === "ready_to_book" || report.state === "getting_close") return "On track"
   return "Attention needed"
+}
+
+export function examCountdownDisplay(report: Pick<ReadinessReport, "examDate" | "countdown">) {
+  if (!report.examDate) {
+    return { headline: "Exam not booked yet.", track: null as string | null }
+  }
+  if (report.countdown == null) {
+    return { headline: "Exam not booked yet.", track: null as string | null }
+  }
+  if (report.countdown < 0) {
+    return { headline: "Exam date passed — update exam date.", track: "Attention needed" }
+  }
+  if (report.countdown === 0) {
+    return { headline: "Exam is today.", track: null as string | null }
+  }
+  return {
+    headline: `${report.countdown} day${report.countdown === 1 ? "" : "s"} remaining`,
+    track: null as string | null,
+  }
 }
 
 export type SubjectDisplayStatus = "Not Started" | "Started" | "In Progress" | "Needs Review" | "Strong"
