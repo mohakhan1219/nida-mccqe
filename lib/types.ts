@@ -41,7 +41,14 @@ export type ReadinessWeights = {
 export type Settings = {
   studentName: string
   examName: string
+  /**
+   * Official MCCQE1 licensing exam date — only meaningful when examBookedConfirmed is true.
+   * May hold a mistaken draft date; UI must not treat it as booked until confirmed.
+   */
   examDate: string | null
+  /** Explicit confirmation that examDate is the official licensing exam booking (not a practice exam). */
+  examBookedConfirmed: boolean
+  examBookingConfirmedAt: string | null
   /** Suggested preparation target (not a booking). Persisted once when eligible. */
   suggestedExamDate: string | null
   suggestedExamCreatedAt: string | null
@@ -140,9 +147,45 @@ export type HighYieldTopic = {
   status: HighYieldStatus
   notes: string
   source: string
+  /** Stable key from the Filipe Santos catalog for idempotent imports. */
+  catalogKey: string | null
   sortOrder: number
   updatedAt: string
   createdAt: string
+}
+
+/** Practice / mock assessments — scheduled separately from the official licensing exam. */
+export type PracticeAssessmentProvider =
+  | "mccqe1_official_practice"
+  | "uworld"
+  | "ace"
+  | "abzi"
+  | "mcc"
+  | "other"
+
+export type PracticeAssessmentStatus = "scheduled" | "completed" | "cancelled"
+
+export type PracticeAssessment = {
+  id: string
+  provider: PracticeAssessmentProvider
+  title: string
+  status: PracticeAssessmentStatus
+  /** Calendar date the practice exam is planned for (YYYY-MM-DD). */
+  scheduledDate: string
+  /** Date the assessment was taken / results entered (YYYY-MM-DD). */
+  completedDate: string | null
+  total: number | null
+  correct: number | null
+  incorrect: number | null
+  scorePct: number | null
+  notes: string
+  /**
+   * When completed, links to the tests_mocks row used for performance stats.
+   * Prevents double-counting by keeping a single TestMock as the score source.
+   */
+  linkedTestId: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export type ExamPlanningState =
@@ -290,6 +333,7 @@ export type WorkspaceSnapshot = {
   quotes: MotivationMessage[]
   qbankSnapshots: QBankSnapshot[]
   highYieldTopics: HighYieldTopic[]
+  practiceAssessments: PracticeAssessment[]
 }
 
 export type BackupFile = {
