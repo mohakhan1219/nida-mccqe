@@ -230,4 +230,123 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setError("Please sign in.")
       return
     }
-    const { data: profile, e
+    const { data: profile, error: pErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle()
+    if (pErr) throw pErr
+    if (!profile) {
+      setError(
+        "This login is not a member of the household workspace. Create Nida in Supabase Auth first, or add this user to public.profiles."
+      )
+      return
+    }
+    const wid = profile.workspace_id as string
+
+    const [
+      settingsRes,
+      catalogsRes,
+      sessionsRes,
+      blocksRes,
+      testsRes,
+      reviewsRes,
+      coursesRes,
+      scheduleRes,
+      quotesRes,
+      qbankRes,
+      highYieldRes,
+      practiceRes,
+    ] = await Promise.all([
+      supabase.from("settings").select("data").eq("workspace_id", wid).maybeSingle(),
+      supabase.from("catalog_items").select("*").eq("workspace_id", wid),
+      supabase.from("study_sessions").select("*").eq("workspace_id", wid).order("start_at"),
+      supabase.from("question_blocks").select("*").eq("workspace_id", wid).order("start_at"),
+      supabase.from("tests_mocks").select("*").eq("workspace_id", wid).order("start_at"),
+      supabase.from("incorrect_reviews").select("*").eq("workspace_id", wid).order("created_at"),
+      supabase.from("courses").select("*").eq("workspace_id", wid),
+      supabase.from("schedule_events").select("*").eq("workspace_id", wid).order("event_date"),
+      supabase.from("motivation_messages").select("*").eq("workspace_id", wid).order("idx"),
+      supabase.from("qbank_snapshots").select("*").eq("workspace_id", wid).order("as_of_date"),
+      supabase.from("high_yield_topics").select("*").eq("workspace_id", wid).order("sort_order"),
+      supabase.from("practice_assessments").select("*").eq("workspace_id", wid).order("scheduled_date"),
+    ])
+
+    let catalogs = (catalogsRes.data ?? []).map(mapCatalog)
+    if (catalogs.length === 0) {
+      await supabase.from("catalog_items").upsert(
+        DEFAULT_CATALOGS.map((c) => ({
+          workspace_id: wid,
+          id: c.id,
+          kind: c.kind,
+          slug: c.slug,
+          name: c.name,
+          active: c.active,
+          sort_order: c.sortOrder,
+          meta: c.meta,
+        }))
+      )
+      catalogs = DEFAULT_CATALOGS
+    } else {
+      const missing = DEFAULT_CATALOGS.filter((c) => !catalogs.some((x) => x.id === c.id))
+      if (missing.length) {
+        await supabase.from("catalog_items").upsert(
+          missing.map((c) => ({
+            workspace_id: wid,
+            id: c.id,
+            kind: c.kind,
+            slug: c.slug,
+            name: c.name,
+            active: c.active,
+            sort_order: c.sortOrder,
+            meta: c.meta,
+          }))
+        )
+        catalogs = [...catalogs, ...missing]
+      }
+    }
+
+    let courses = (coursesRes.data ?? []).map(mapCourse)
+    if (courses.length === 0) {
+      await supabase.from("courses").upsert(
+        DEFAULT_COURSES.map((c) => ({
+          workspace_id: wid,
+          id: c.id,
+          slug: c.id.replace("course:", ""),
+          name: c.name,
+          type: c.type,
+          start_date: c.startDate,
+          target_end_date: c.targetEndDate,
+          total_units: c.totalUnits,
+          completed_units: c.completedUnits,
+          total_questions: c.totalQuestions,
+          completed_questions: c.completedQuestions,
+          current_subject_id: c.currentSubjectId,
+          status: c.status,
+          notes: c.notes,
+        }))
+      )
+      courses = DEFAULT_COURSES
+    }
+
+    let quotes = (quotesRes.data ?? []).map((q: Record<string, unknown>) => ({
+      id: String(q.id),
+      index: Number(q.idx),
+      theme: String(q.theme),
+      message: String(q.message),
+    }))
+    if (quotes.length === 0) {
+      const seeded = defaultQuotes()
+      await supabase.from("motivation_messages").upsert(
+        seeded.map((q) => ({
+          workspace_id: wid,
+          id: q.id,
+          idx: q.index,
+          theme: q.theme,
+          message: q.message,
+        }))
+      )
+      quotes = seeded
+    }
+
+    const 
