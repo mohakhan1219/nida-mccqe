@@ -10,6 +10,8 @@ export const ABZI_EXAM_TYPE_ID = "assessment_type:abzi-exam"
 export const ABZI_CLASS_COUNT = 22
 export const ABZI_TEST_COUNT = 11
 export const ABZI_EVENT_COUNT = 33
+/** Course end date (separate from last scheduled event on 2026-12-11). */
+export const ABZI_COURSE_END_DATE = "2026-12-18"
 
 const CLASS_START = "20:00"
 const CLASS_END = "23:00"
@@ -63,7 +65,7 @@ export const ABZI_SEED_DEFS: SeedDef[] = [
   },
   { date: "2026-11-06", kind: "test", title: "MCQ Test", topics: ["MCQ Test"], subjectId: null },
   { date: "2026-11-08", kind: "class", title: "Ethics", topics: ["Ethics"], subjectId: "subject:ethics" },
-  { date: "2026-11-10", kind: "class", title: "Ethics", topics: ["Ethics"], subjectId: "subject:ethics" },
+  { date: "2026-11-10", kind: "class", title: "Psychiatry", topics: ["Psychiatry"], subjectId: "subject:psychiatry" },
   { date: "2026-11-13", kind: "test", title: "MCQ Test", topics: ["MCQ Test"], subjectId: null },
   { date: "2026-11-15", kind: "class", title: "Psychiatry", topics: ["Psychiatry"], subjectId: "subject:psychiatry" },
   { date: "2026-11-17", kind: "class", title: "Psychiatry", topics: ["Psychiatry"], subjectId: "subject:psychiatry" },
@@ -278,14 +280,17 @@ export function computeAbziProgress(schedule: ScheduleEvent[], todayKey: string,
 export function ensureAbziCourseMeta(courses: Course[]): Course[] {
   return courses.map((c) => {
     if (c.id !== ABZI_COURSE_ID) return c
+    const priorEnd = c.targetEndDate
+    const targetEndDate =
+      !priorEnd || priorEnd === "2026-12-11" ? ABZI_COURSE_END_DATE : priorEnd
     return {
       ...c,
       startDate: c.startDate ?? "2026-09-27",
-      targetEndDate: c.targetEndDate ?? "2026-12-11",
+      targetEndDate,
       status: c.status === "not_started" ? "active" : c.status,
       notes:
         c.notes === "Schedule not added yet." || !c.notes.trim()
-          ? "ABZI 2026 course schedule (33 events: 22 classes + 11 Friday MCQ tests). Attendance and test logs are tracked separately from study hours and readiness."
+          ? "ABZI 2026 course schedule (33 events: 22 classes + 11 Friday MCQ tests). Course end date is 2026-12-18; last scheduled event remains 2026-12-11. Attendance and test logs are tracked separately from study hours and readiness."
           : c.notes,
     }
   })
