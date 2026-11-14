@@ -51,9 +51,10 @@ create table if not exists public.study_sessions (
   end_at timestamptz,
   duration_minutes numeric,
   entry_mode text not null check (entry_mode in ('timer', 'manual')),
-  status text not null check (status in ('running', 'completed')),
+  status text not null check (status in ('running', 'paused', 'completed')),
   notes text not null default '',
   confirmed_through_at timestamptz,
+  pause_log jsonb not null default '[]'::jsonb,
   linked_assessment_id text,
   planned boolean not null default false,
   confidence int,
@@ -62,9 +63,9 @@ create table if not exists public.study_sessions (
   updated_at timestamptz not null default now()
 );
 
-create unique index if not exists one_running_session
+create unique index if not exists one_active_session
   on public.study_sessions (workspace_id)
-  where status = 'running';
+  where status in ('running', 'paused');
 
 create table if not exists public.question_blocks (
   id uuid primary key default gen_random_uuid(),
@@ -182,6 +183,36 @@ create unique index if not exists schedule_events_workspace_external_id_uidx
   on public.schedule_events (workspace_id, external_id)
   where external_id is not null;
 
+create table if not exists public.qbank_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  source_id text not null,
+  as_of_date date not null,
+  total_available int,
+  used int,
+  unused int,
+  correct int,
+  incorrect int,
+  skipped int,
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.high_yield_topics (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  subject text not null,
+  topic text not null,
+  priority text not null check (priority in ('very_high', 'high', 'medium', 'low')),
+  status text not null check (status in ('not_started', 'in_progress', 'completed', 'needs_review')),
+  notes text not null default '',
+  source text not null default 'filipe-santos-mccqe1',
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.motivation_messages (
   workspace_id uuid not null references public.workspaces (id) on delete cascade,
   id text not null,
@@ -212,6 +243,8 @@ alter table public.tests_mocks enable row level security;
 alter table public.incorrect_reviews enable row level security;
 alter table public.courses enable row level security;
 alter table public.schedule_events enable row level security;
+alter table public.qbank_snapshots enable row level security;
+alter table public.high_yield_topics enable row level security;
 alter table public.motivation_messages enable row level security;
 
 create policy "members read workspace"
@@ -268,6 +301,16 @@ create policy "workspace schedule"
 
 create policy "workspace quotes"
   on public.motivation_messages for all
+  using (workspace_id = public.user_workspace_id())
+  with check (workspace_id = public.user_workspace_id());
+
+create policy "workspace qbank snapshots"
+  on public.qbank_snapshots for all
+  using (workspace_id = public.user_workspace_id())
+  with check (workspace_id = public.user_workspace_id());
+
+create policy "workspace high yield topics"
+  on public.high_yield_topics for all
   using (workspace_id = public.user_workspace_id())
   with check (workspace_id = public.user_workspace_id());
 
