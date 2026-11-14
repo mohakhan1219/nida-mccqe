@@ -23,6 +23,7 @@ function looksLikeStub(path, minBytes = 1000) {
   if (!existsSync(path)) return true
   const text = readFileSync(path, 'utf8')
   if (text.includes('PLACEHOLDER_WILL_FAIL')) return true
+  if (text.includes('$file:')) return true
   if (text.length < minBytes) return true
   // Temporary loading stub used during Phase 1 deploy recovery
   if (text.includes('Loading today') && text.length < 400) return true
