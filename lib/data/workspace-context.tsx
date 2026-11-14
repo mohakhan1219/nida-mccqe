@@ -139,4 +139,31 @@ type Ctx = {
   addCatalogItem: (item: CatalogItem) => Promise<void>
   updateCourse: (row: Course) => Promise<void>
   upsertSchedule: (row: ScheduleEvent) => Promise<void>
-  deleteSchedule: (id: strin
+  deleteSchedule: (id: string) => Promise<void>
+  updateQuotes: (quotes: WorkspaceSnapshot["quotes"]) => Promise<void>
+  exportBackup: () => Blob
+  restoreBackup: (file: BackupFile) => Promise<void>
+  signOut: () => Promise<void>
+}
+
+const WorkspaceContext = createContext<Ctx | null>(null)
+
+function mergeSnapshot(raw: Partial<WorkspaceSnapshot> | null): WorkspaceSnapshot {
+  const base = emptySnapshot()
+  if (!raw) return base
+  return {
+    ...base,
+    ...raw,
+    settings: { ...DEFAULT_SETTINGS, ...raw.settings },
+    catalogs: raw.catalogs?.length ? raw.catalogs : DEFAULT_CATALOGS,
+    courses: raw.courses?.length ? raw.courses : DEFAULT_COURSES,
+    quotes: raw.quotes?.length ? raw.quotes : defaultQuotes(),
+    sessions: (raw.sessions ?? []).map((s) => ({
+      ...s,
+      confirmedThroughAt: s.confirmedThroughAt ?? null,
+      pauseLog: Array.isArray(s.pauseLog) ? s.pauseLog : [],
+    })),
+    blocks: raw.blocks ?? [],
+    tests: raw.tests ?? [],
+    reviews: raw.reviews ?? [],
+    schedule: (raw.schedule ??
