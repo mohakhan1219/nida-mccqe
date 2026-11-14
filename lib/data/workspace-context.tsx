@@ -1082,4 +1082,101 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   const ensureHighYieldCatalogImported: Ctx["ensureHighYieldCatalogImported"] = async () => {
-    const merged = mergeFilipeSantosCatalog(snapshot.highYieldTopic
+    const merged = mergeFilipeSantosCatalog(snapshot.highYieldTopics)
+    if (merged.added || merged.updatedMeta) {
+      await commit({ ...snapshot, highYieldTopics: merged.topics })
+      if (configured) {
+        const supabase = createClient()
+        const { error: err } = await supabase
+          .from("high_yield_topics")
+          .upsert(merged.topics.map((t) => highYieldRow(t, snapshot.workspaceId)))
+        if (err) throw err
+      }
+    }
+    return { added: merged.added, updatedMeta: merged.updatedMeta }
+  }
+
+  const upsertPracticeAssessment: Ctx["upsertPracticeAssessment"] = async (row) => {
+    const next = { ...row, updatedAt: nowIso() }
+    const exists = snapshot.practiceAssessments.some((t) => t.id === next.id)
+    const practiceAssessments = exists
+      ? snapshot.practiceAssessments.map((t) => (t.id === next.id ? next : t))
+      : [...snapshot.practiceAssessments, { ...next, createdAt: next.createdAt || nowIso() }]
+    await commit({ ...snapshot, practiceAssessments })
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("practice_assessments")
+        .upsert(practiceAssessmentRow(next, snapshot.workspaceId))
+      if (err) throw err
+    }
+  }
+
+  const completePracticeAssessment: Ctx["completePracticeAssessment"] = async (id, results) => {
+    const current = snapshot.practiceAssessments.find((t) => t.id === id)
+    if (!current) throw new Error("Practice assessment not found")
+    const now = nowIso()
+    const scorePct = results.scorePct ?? scorePctFromTotals(results.total, results.correct)
+    const providerSource: Record<string, string> = {
+      mccqe1_official_practice: "source:mccqe1-official-practice",
+      uworld: "source:uworld",
+      ace: "source:ace-qbank",
+      abzi: "source:abzi",
+      mcc: "source:mcc-practice",
+      other: "source:other",
+    }
+    const providerAssessment: Record<string, string> = {
+      mccqe1_official_practice: "assessment_type:mccqe1-official-practice",
+      uworld: "assessment_type:uworld-sa",
+      ace: "assessment_type:full-mock",
+      abzi: "assessment_type:abzi-exam",
+      mcc: "assessment_type:mcc-practice-test",
+      other: "assessment_type:full-mock",
+    }
+    const startAt = `${results.completedDate}T12:00:00.000Z`
+    const endAt = `${results.completedDate}T16:00:00.000Z`
+    const testId = current.linkedTestId ?? newId()
+    const testRowData: TestMock = {
+      id: testId,
+      subjectId: "subject:mixed",
+      sourceId: providerSource[current.provider] ?? "source:other",
+      assessmentTypeId: providerAssessment[current.provider] ?? "assessment_type:full-mock",
+      testName: current.title,
+      startAt,
+      endAt,
+      durationMinutes: 240,
+      total: results.total,
+      correct: results.correct,
+      incorrect: results.incorrect,
+      skipped: Math.max(0, results.total - results.correct - results.incorrect),
+      rank: scorePct != null ? `${scorePct}%` : "",
+      strongAreas: "",
+      weakAreas: "",
+      reviewCompleted: false,
+      notes: results.notes ?? current.notes,
+      linkedSessionId: null,
+      createdAt: snapshot.tests.find((t) => t.id === testId)?.createdAt ?? now,
+      updatedAt: now,
+    }
+    const tests = snapshot.tests.some((t) => t.id === testId)
+      ? snapshot.tests.map((t) => (t.id === testId ? testRowData : t))
+      : [...snapshot.tests, testRowData]
+    const completed: PracticeAssessment = {
+      ...current,
+      status: "completed",
+      completedDate: results.completedDate,
+      total: results.total,
+      correct: results.correct,
+      incorrect: results.incorrect,
+      scorePct,
+      notes: results.notes ?? current.notes,
+      linkedTestId: testId,
+      updatedAt: now,
+    }
+    const practiceAssessments = snapshot.practiceAssessments.map((t) => (t.id === id ? completed : t))
+    await commit({ ...snapshot, tests, practiceAssessments })
+    if (configured) {
+      const supabase = createClient()
+      const { error: tErr } = await supabase
+        .from("tests_mocks")
+        .upsert(te
