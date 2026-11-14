@@ -956,4 +956,48 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateTest: Ctx["updateTest"] = async (row) => {
-    if (!countsValid(row)) thro
+    if (!countsValid(row)) throw new Error("Correct + Incorrect + Skipped must equal Total.")
+    row = { ...row, durationMinutes: durationMinutes(row.startAt, row.endAt), updatedAt: nowIso() }
+    await commit({ ...snapshot, tests: snapshot.tests.map((s) => (s.id === row.id ? row : s)) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("tests_mocks").upsert(testRow(row, snapshot.workspaceId))
+    }
+  }
+
+  const deleteTest: Ctx["deleteTest"] = async (id) => {
+    await commit({ ...snapshot, tests: snapshot.tests.filter((s) => s.id !== id) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("tests_mocks").delete().eq("id", id)
+    }
+  }
+
+  const upsertReview: Ctx["upsertReview"] = async (row) => {
+    const exists = snapshot.reviews.some((r) => r.id === row.id)
+    const reviews = exists
+      ? snapshot.reviews.map((r) => (r.id === row.id ? { ...row, updatedAt: nowIso() } : r))
+      : [...snapshot.reviews, { ...row, createdAt: row.createdAt || nowIso(), updatedAt: nowIso() }]
+    await commit({ ...snapshot, reviews })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("incorrect_reviews").upsert(reviewRow({ ...row, updatedAt: nowIso() }, snapshot.workspaceId))
+    }
+  }
+
+  const deleteReview: Ctx["deleteReview"] = async (id) => {
+    await commit({ ...snapshot, reviews: snapshot.reviews.filter((r) => r.id !== id) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("incorrect_reviews").delete().eq("id", id)
+    }
+  }
+
+  const updateSettings: Ctx["updateSettings"] = async (patch) => {
+    let settings = { ...snapshot.settings, ...patch }
+    const probeSnap = { ...snapshot, settings }
+    const planning = computeExamPlanning(probeSnap, deriveStats(probeSnap))
+    if (planning.shouldCreateSuggestedTarget && planning.proposedSuggestedDate) {
+      settings = withSuggestedExamTarget(settings, planning.proposedSuggestedDate)
+    }
+    await commit({ ...snap
