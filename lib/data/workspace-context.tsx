@@ -977,4 +977,109 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const exists = snapshot.reviews.some((r) => r.id === row.id)
     const reviews = exists
       ? snapshot.reviews.map((r) => (r.id === row.id ? { ...row, updatedAt: nowIso() } : r))
-      : [...snapshot.reviews, { ...row, createdAt: row.createdAt 
+      : [...snapshot.reviews, { ...row, createdAt: row.createdAt || nowIso(), updatedAt: nowIso() }]
+    await commit({ ...snapshot, reviews })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("incorrect_reviews").upsert(reviewRow({ ...row, updatedAt: nowIso() }, snapshot.workspaceId))
+    }
+  }
+
+  const deleteReview: Ctx["deleteReview"] = async (id) => {
+    await commit({ ...snapshot, reviews: snapshot.reviews.filter((r) => r.id !== id) })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("incorrect_reviews").delete().eq("id", id)
+    }
+  }
+
+  const updateSettings: Ctx["updateSettings"] = async (patch) => {
+    let settings = { ...snapshot.settings, ...patch }
+    const probeSnap = { ...snapshot, settings }
+    const planning = computeExamPlanning(probeSnap, deriveStats(probeSnap))
+    if (planning.shouldCreateSuggestedTarget && planning.proposedSuggestedDate) {
+      settings = withSuggestedExamTarget(settings, planning.proposedSuggestedDate)
+    }
+    await commit({ ...snapshot, settings })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("settings").upsert({ workspace_id: snapshot.workspaceId, data: settings, updated_at: nowIso() })
+    }
+  }
+
+  const resetSuggestedExamTarget: Ctx["resetSuggestedExamTarget"] = async () => {
+    await updateSettings({ suggestedExamDate: null, suggestedExamCreatedAt: null })
+  }
+
+  const saveQBankSnapshot: Ctx["saveQBankSnapshot"] = async (input) => {
+    const now = nowIso()
+    const row: QBankSnapshot = {
+      id: input.id ?? newId(),
+      sourceId: input.sourceId,
+      asOfDate: input.asOfDate,
+      totalAvailable: input.totalAvailable,
+      used: input.used,
+      unused: input.unused,
+      correct: input.correct,
+      incorrect: input.incorrect,
+      skipped: input.skipped,
+      notes: input.notes ?? "",
+      createdAt: input.id
+        ? snapshot.qbankSnapshots.find((s) => s.id === input.id)?.createdAt ?? now
+        : now,
+      updatedAt: now,
+    }
+    const exists = snapshot.qbankSnapshots.some((s) => s.id === row.id)
+    const qbankSnapshots = exists
+      ? snapshot.qbankSnapshots.map((s) => (s.id === row.id ? row : s))
+      : [...snapshot.qbankSnapshots, row]
+    await commit({ ...snapshot, qbankSnapshots })
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("qbank_snapshots")
+        .upsert(qbankSnapshotRow(row, snapshot.workspaceId))
+      if (err) throw err
+    }
+  }
+
+  const deleteQBankSnapshot: Ctx["deleteQBankSnapshot"] = async (id) => {
+    await commit({
+      ...snapshot,
+      qbankSnapshots: snapshot.qbankSnapshots.filter((s) => s.id !== id),
+    })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("qbank_snapshots").delete().eq("id", id)
+    }
+  }
+
+  const upsertHighYieldTopic: Ctx["upsertHighYieldTopic"] = async (row) => {
+    const next = { ...row, updatedAt: nowIso() }
+    const exists = snapshot.highYieldTopics.some((t) => t.id === next.id)
+    const highYieldTopics = exists
+      ? snapshot.highYieldTopics.map((t) => (t.id === next.id ? next : t))
+      : [...snapshot.highYieldTopics, { ...next, createdAt: next.createdAt || nowIso() }]
+    await commit({ ...snapshot, highYieldTopics })
+    if (configured) {
+      const supabase = createClient()
+      const { error: err } = await supabase
+        .from("high_yield_topics")
+        .upsert(highYieldRow(next, snapshot.workspaceId))
+      if (err) throw err
+    }
+  }
+
+  const deleteHighYieldTopic: Ctx["deleteHighYieldTopic"] = async (id) => {
+    await commit({
+      ...snapshot,
+      highYieldTopics: snapshot.highYieldTopics.filter((t) => t.id !== id),
+    })
+    if (configured) {
+      const supabase = createClient()
+      await supabase.from("high_yield_topics").delete().eq("id", id)
+    }
+  }
+
+  const ensureHighYieldCatalogImported: Ctx["ensureHighYieldCatalogImported"] = async () => {
+    const merged = mergeFilipeSantosCatalog(snapshot.highYieldTopic
