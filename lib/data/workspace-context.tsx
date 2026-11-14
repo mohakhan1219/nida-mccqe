@@ -1648,4 +1648,216 @@ function mapSchedule(row: Record<string, unknown>): WorkspaceSnapshot["schedule"
     timezone: String(row.timezone),
     eventType: String(row.event_type),
     subjectId: row.subject_id ? String(row.subject_id) : null,
-    courseId
+    courseId: row.course_id ? String(row.course_id) : null,
+    status: row.status as WorkspaceSnapshot["schedule"][number]["status"],
+    notes: String(row.notes ?? ""),
+    title: String(row.title ?? ""),
+    topics,
+    externalId: row.external_id ? String(row.external_id) : null,
+    attendance: (row.attendance as WorkspaceSnapshot["schedule"][number]["attendance"]) ?? null,
+    prepDone: Boolean(row.prep_done),
+    practiceDone: Boolean(row.practice_done),
+    reviewDone: Boolean(row.review_done),
+    timeTentative: Boolean(row.time_tentative),
+    linkedAssessmentId: row.linked_assessment_id ? String(row.linked_assessment_id) : null,
+  })
+}
+
+function mapCourse(row: Record<string, unknown>): Course {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    type: row.type as Course["type"],
+    startDate: row.start_date ? String(row.start_date) : null,
+    targetEndDate: row.target_end_date ? String(row.target_end_date) : null,
+    totalUnits: row.total_units == null ? null : Number(row.total_units),
+    completedUnits: Number(row.completed_units ?? 0),
+    totalQuestions: row.total_questions == null ? null : Number(row.total_questions),
+    completedQuestions: Number(row.completed_questions ?? 0),
+    currentSubjectId: row.current_subject_id ? String(row.current_subject_id) : null,
+    status: row.status as Course["status"],
+    notes: String(row.notes ?? ""),
+  }
+}
+
+function sessionRow(row: StudySession, workspaceId: string) {
+  return {
+    id: row.id,
+    workspace_id: workspaceId,
+    subject_id: row.subjectId,
+    source_id: row.sourceId,
+    activity_id: row.activityId,
+    topic: row.topic,
+    start_at: row.startAt,
+    end_at: row.endAt,
+    duration_minutes: row.durationMinutes,
+    entry_mode: row.entryMode,
+    status: row.status,
+    notes: row.notes,
+    linked_assessment_id: row.linkedAssessmentId,
+    planned: row.planned,
+    confidence: row.confidence,
+    energy: row.energy,
+    confirmed_through_at: row.confirmedThroughAt,
+    pause_log: row.pauseLog ?? [],
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
+
+function qbankSnapshotRow(row: QBankSnapshot, workspaceId: string) {
+  return {
+    id: row.id,
+    workspace_id: workspaceId,
+    source_id: row.sourceId,
+    as_of_date: row.asOfDate,
+    total_available: row.totalAvailable,
+    used: row.used,
+    unused: row.unused,
+    correct: row.correct,
+    incorrect: row.incorrect,
+    skipped: row.skipped,
+    notes: row.notes,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
+
+function highYieldRow(row: HighYieldTopic, workspaceId: string) {
+  return {
+    id: row.id,
+    workspace_id: workspaceId,
+    subject: row.subject,
+    topic: row.topic,
+    priority: row.priority,
+    status: row.status,
+    notes: row.notes,
+    source: row.source,
+    catalog_key: row.catalogKey,
+    sort_order: row.sortOrder,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
+
+function practiceAssessmentRow(row: PracticeAssessment, workspaceId: string) {
+  return {
+    id: row.id,
+    workspace_id: workspaceId,
+    provider: row.provider,
+    title: row.title,
+    status: row.status,
+    scheduled_date: row.scheduledDate,
+    completed_date: row.completedDate,
+    total: row.total,
+    correct: row.correct,
+    incorrect: row.incorrect,
+    score_pct: row.scorePct,
+    notes: row.notes,
+    linked_test_id: row.linkedTestId,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
+
+function blockRow(row: QuestionBlock, workspaceId: string) {
+  return {
+    id: row.id,
+    workspace_id: workspaceId,
+    subject_id: row.subjectId,
+    source_id: row.sourceId,
+    assessment_type_id: row.assessmentTypeId,
+    topic: row.topic,
+    start_at: row.startAt,
+    end_at: row.endAt,
+    duration_minutes: row.durationMinutes,
+    total: row.total,
+    correct: row.correct,
+    incorrect: row.incorrect,
+    skipped: row.skipped,
+    timed_mode: row.timedMode,
+    attempt_state: row.attemptState,
+    notes: row.notes,
+    linked_session_id: row.linkedSessionId,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
+
+function testRow(row: TestMock, workspaceId: string) {
+  return {
+    id: row.id,
+    workspace_id: workspaceId,
+    subject_id: row.subjectId,
+    source_id: row.sourceId,
+    assessment_type_id: row.assessmentTypeId,
+    test_name: row.testName,
+    start_at: row.startAt,
+    end_at: row.endAt,
+    duration_minutes: row.durationMinutes,
+    total: row.total,
+    correct: row.correct,
+    incorrect: row.incorrect,
+    skipped: row.skipped,
+    rank: row.rank,
+    strong_areas: row.strongAreas,
+    weak_areas: row.weakAreas,
+    review_completed: row.reviewCompleted,
+    notes: row.notes,
+    linked_session_id: row.linkedSessionId,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
+
+function scheduleRow(row: ScheduleEvent, workspaceId: string) {
+  const normalized = normalizeScheduleEvent(row)
+  return {
+    id: normalized.id,
+    workspace_id: workspaceId,
+    event_date: normalized.date,
+    start_time: normalized.startTime,
+    end_time: normalized.endTime,
+    timezone: normalized.timezone,
+    event_type: normalized.eventType,
+    subject_id: normalized.subjectId,
+    course_id: normalized.courseId,
+    status: normalized.status,
+    notes: normalized.notes,
+    title: normalized.title,
+    topics: normalized.topics,
+    external_id: normalized.externalId,
+    attendance: normalized.attendance,
+    prep_done: normalized.prepDone,
+    practice_done: normalized.practiceDone,
+    review_done: normalized.reviewDone,
+    time_tentative: normalized.timeTentative,
+    linked_assessment_id: normalized.linkedAssessmentId,
+  }
+}
+
+function reviewRow(row: IncorrectReview, workspaceId: string) {
+  return {
+    id: row.id,
+    workspace_id: workspaceId,
+    source_kind: row.sourceKind,
+    source_id: row.sourceId,
+    subject_id: row.subjectId,
+    provider_id: row.providerId,
+    topic: row.topic,
+    question_count: row.questionCount,
+    error_type_id: row.errorTypeId,
+    reason: row.reason,
+    correct_concept: row.correctConcept,
+    priority: row.priority,
+    status: row.status,
+    first_review_at: row.firstReviewAt,
+    second_review_at: row.secondReviewAt,
+    third_review_at: row.thirdReviewAt,
+    tutor_question: row.tutorQuestion,
+    flashcard_created: row.flashcardCreated,
+    notes: row.notes,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
