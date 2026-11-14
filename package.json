@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 43180",
+    "prebuild": "node scripts/phase1-assemble.mjs",
     "build": "next build",
     "start": "next start --port 43180",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "phase1:assemble": "node scripts/phase1-assemble.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
